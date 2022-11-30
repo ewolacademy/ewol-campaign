@@ -8,13 +8,13 @@ const hre = require("hardhat");
 
 async function main() {
 
-  const ewolCampaignFactoryFactory = await hre.ethers.getContractFactory("EwolCampaignFactory");
-  const ewolCampaignFactoryInstance = await ewolCampaignFactoryFactory.deploy();
+  const ewolCampaignRegistryFactory = await hre.ethers.getContractFactory("EwolCampaignRegistry");
+  const ewolCampaignRegistryInstance = await ewolCampaignRegistryFactory.deploy();
 
-  await ewolCampaignFactoryInstance.deployed();
+  await ewolCampaignRegistryInstance.deployed();
 
   console.log(
-    `EwolCampaignFactory deployed to ${ewolCampaignFactoryInstance.address}`
+    `EwolCampaignRegistry deployed to ${ewolCampaignRegistryInstance.address}`
   );
 }
 
