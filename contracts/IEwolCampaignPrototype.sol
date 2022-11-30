@@ -7,7 +7,8 @@ pragma solidity >=0.8.2 < 0.9.0;
 interface IEwolCampaignPrototype {
 
   /// @notice Initialize the new campaign
-  /// @dev 
+  /// @dev
+  /// @param _campaignName        Name of the Ewol Campaign
   /// @param _targetEwolers       Target quantity of Ewolers to raise funding for
   /// @param _investmentPerEwoler Amount of currency to be raised per Ewoler
   /// @param _currencyToken       Address of the ERC20 token used as campaign currency
@@ -15,6 +16,7 @@ interface IEwolCampaignPrototype {
   /// @param _premintAmount       Amount of campaign tokens preminted for the campaign launcher
   /// @param _owner               The initial campaign owner
   function init (
+    string calldata _campaignName,
     uint16 _targetEwolers,
     uint256 _investmentPerEwoler,
     address _currencyToken,

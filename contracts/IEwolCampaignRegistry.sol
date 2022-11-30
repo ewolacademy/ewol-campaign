@@ -8,6 +8,7 @@ interface IEwolCampaignRegistry {
 
   /// @notice Launch a new campaign
   /// @dev 
+  /// @param _campaignName        Name of the Ewol Campaign
   /// @param _targetEwolers       Target quantity of Ewolers to raise funding for
   /// @param _investmentPerEwoler Amount of currency to be raised per Ewoler
   /// @param _currencyToken       Address of the ERC20 token used as campaign currency
@@ -16,6 +17,7 @@ interface IEwolCampaignRegistry {
   /// @return _campaignId         ID of the campaign
   ///         _campaignAddress    Campaign contract address
   function launchCampaign (
+    string calldata _campaignName,
     uint16 _targetEwolers,
     uint256 _investmentPerEwoler,
     address _currencyToken,

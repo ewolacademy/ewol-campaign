@@ -2,16 +2,29 @@
 pragma solidity >=0.8.2 < 0.9.0;
 
 import "./IEwolCampaignPrototype.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 
 /// @title Ewol Campaign Prototype
 /// @author heidrian.eth
 /// @notice This contract is used as prototype to clone each Ewol Academy Web3 Bootcamp campaign
-contract EwolCampaignPrototype is IEwolCampaignPrototype {
+contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ERC20Upgradeable {
 
-  uint256 p = 1;
+  /// @notice Target quantity of Ewolers to raise funding for
+  uint16 targetEwolers;
+
+  /// @notice Amount of currency to be raised per Ewoler
+  uint256 investmentPerEwoler;
+  
+  /// @notice Address of the ERC20 token used as campaign currency
+  address currencyToken;
+  
+  /// @notice Number of weeks of the bootcamp
+  uint8 weeksOfBootcamp;
 
   /// @notice Initialize the new campaign
   /// @dev 
+  /// @param _campaignName        Name of the Ewol Campaign
   /// @param _targetEwolers       Target quantity of Ewolers to raise funding for
   /// @param _investmentPerEwoler Amount of currency to be raised per Ewoler
   /// @param _currencyToken       Address of the ERC20 token used as campaign currency
@@ -19,21 +32,36 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype {
   /// @param _premintAmount       Amount of campaign tokens preminted for the campaign launcher
   /// @param _owner               The initial campaign owner
   function init (
+    string calldata _campaignName,
     uint16 _targetEwolers,
     uint256 _investmentPerEwoler,
     address _currencyToken,
     uint8 _weeksOfBootcamp,
     uint256 _premintAmount,
     address _owner
-  ) public virtual override {
-    
+  ) initializer public virtual override {
+
+    // Initalizes the inherited upgradeable (no constructor) contracts
+    __ERC20_init(_campaignName, "cEWOL");
+
+    // Saves campaign data for future use
+    targetEwolers = _targetEwolers;
+    investmentPerEwoler = _investmentPerEwoler;
+    currencyToken = _currencyToken;
+    weeksOfBootcamp = _weeksOfBootcamp;
+
+    // Premints tokens for campaign owner
+    _mint(_owner, _premintAmount);
+
+    // Sets the campaign owner
+    _transferOwnership(_owner);
   }
 
   /// @notice Total to invest in this campaign
   /// @dev 
   /// @return Total to invest in this campaign
   function investmentCap () public virtual override view returns (uint256) {
-    return p;
+    return targetEwolers * investmentPerEwoler;
   }
 
   /// @notice Deposit tokens to invest in the campaign
@@ -129,7 +157,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype {
   function ewolerDebt (
     uint256 _ewolerId
   ) public view virtual override returns (uint256) {
-    return p;
+    return targetEwolers; // TO REPLACE
     
   }
 
