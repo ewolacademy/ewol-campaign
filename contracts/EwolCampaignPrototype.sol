@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.2 < 0.9.0;
 
+import "./IEwolCampaignPrototype.sol";
+
 /// @title Ewol Campaign Prototype
 /// @author heidrian.eth
 /// @notice This contract is used as prototype to clone each Ewol Academy Web3 Bootcamp campaign
-interface IEwolCampaignPrototype {
+contract EwolCampaignPrototype is IEwolCampaignPrototype {
+
+  uint256 p = 1;
 
   /// @notice Initialize the new campaign
   /// @dev 
@@ -21,12 +25,16 @@ interface IEwolCampaignPrototype {
     uint8 _weeksOfBootcamp,
     uint256 _premintAmount,
     address _owner
-  ) external;
+  ) public virtual override {
+    
+  }
 
   /// @notice Total to invest in this campaign
   /// @dev 
   /// @return Total to invest in this campaign
-  function investmentCap () external view returns (uint256);
+  function investmentCap () public virtual override view returns (uint256) {
+    return p;
+  }
 
   /// @notice Deposit tokens to invest in the campaign
   /// @dev The contract will include a list of prevetted tokens
@@ -35,7 +43,10 @@ interface IEwolCampaignPrototype {
   function depositInvestment (
     address _depositToken,
     uint256 _amount
-  ) external;
+  ) public virtual override {
+    
+    
+  }
 
   /// @notice Enroll an Ewoler in the campaign
   /// @param _ewolerId          ID for the ewoler
@@ -45,7 +56,10 @@ interface IEwolCampaignPrototype {
     uint256 _ewolerId,
     address _ewolerAddress,
     uint256 _weeklyExpenditure
-  ) external;
+  ) public virtual override {
+    
+    
+  }
 
   /// @notice Enroll an Ewol Staff Member in the campaign
   /// @param _stafferId         ID for the staffer
@@ -57,44 +71,67 @@ interface IEwolCampaignPrototype {
     address _stafferAddress,
     uint256 _weeklyExpenditure,
     uint256 _variableComp
-  ) external;
+  ) public virtual override {
+    
+    
+  }
 
   /// @notice Remove an Ewoler from the campaign
   /// @param _ewolerId          ID for the ewoler
   function removeEwoler (
     uint256 _ewolerId
-  ) external;
+  ) public virtual override {
+    
+  }
 
   /// @notice Remove an Ewol Staff Member from the campaign
   /// @param _stafferId         ID for the staffer
   function removeStaff (
     uint256 _stafferId
-  ) external;
+  ) public virtual override {
+    
+    
+  }
 
   /// @notice Start the Bootcamp period
-  function startBootcamp () external;
+  function startBootcamp () public virtual override {
+    
+    
+  }
 
   /// @notice Withdraw an Ewoler expenditure
   /// @param _ewolerId          ID for the ewoler
   function withdrawEwolerExpenditure (
     uint256 _ewolerId
-  ) external;
+  ) public virtual override {
+
+    
+  }
 
   /// @notice Withdraw an Ewol Staff Member expenditure
   /// @param _stafferId         ID for the staffer
   function withdrawStaffExpenditure (
     uint256 _stafferId
-  ) external;
+  ) public virtual override {
+    
+    
+  }
 
   /// @notice Finish the Bootcamp period
-  function finishBootcamp () external;
+  function finishBootcamp () public virtual override {
+    
+    
+  }
 
   /// @notice Get Ewoler debt amount
   /// @param _ewolerId          ID for the ewoler
   /// @return Amount of ewoler debt denominated in currency tokens
   function ewolerDebt (
     uint256 _ewolerId
-  ) external view returns (uint256);
+  ) public view virtual override returns (uint256) {
+    return p;
+    
+  }
 
   /// @notice Repay the ewoler debt
   /// @param _ewolerId      ID for the ewoler
@@ -102,12 +139,18 @@ interface IEwolCampaignPrototype {
   function repayDebt (
     uint256 _ewolerId,
     uint256 _amount
-  ) external;
+  ) public virtual override {
+    
+    
+  }
 
   /// @notice Withdraw repayment amount
   /// @dev Amount to withdraw is proportional to campaign tokens holding
   /// @param _claimer Address of the campaign token holder withdrawing a repayment
   function withdrawRepayment (
     address _claimer
-  ) external;
+  ) public virtual override {
+    
+    
+  }
 }

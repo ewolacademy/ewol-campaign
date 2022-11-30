@@ -9,6 +9,7 @@
   "author": "heidrian.eth",
   "license": "ISC",
   "dependencies": {
+    "@openzeppelin/contracts": "^4.8.0",
     "hardhat": "^2.12.2"
   },
   "devDependencies": {
