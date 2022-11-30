@@ -4,16 +4,21 @@ const {
 const hre = require("hardhat");
 
 const registryContractName = 'EwolCampaignRegistry';
+const ewolTokenContractName = 'EwolERC20Token'
 let registryInstance;
 let registryAddress;
 
 let prototypeAddress;
+let ewolTokenInstance;
+let ewolTokenAddress;
 
 const sigInstances = {};
 const sigAddrs = {};
 const signerRoles = [
   'deployer',
-  'nonOwner'
+  'nonOwner',
+  'firstInvestor',
+  'secondInvestor'
 ];
 
 describe("EwolCampaign", function () {
@@ -49,6 +54,43 @@ describe("EwolCampaign", function () {
       expect(prototypeAddress)
         .to.not.equal(hre.ethers.constants.AddressZero);
     });
+
+    // TEST HECHO POR MI
+    it("Shall deploy Ewol ERC20 Token", async function () {
+      const ewolTokenFactory = await hre.ethers.getContractFactory(ewolTokenContractName, sigInstances.deployer);
+      ewolTokenInstance = await ewolTokenFactory.deploy(1000);
+      
+      await ewolTokenInstance.deployed();
+      ewolTokenAddress = ewolTokenInstance.address
+      console.log("ERC20 Ewol Token Contract deployed to:", ewolTokenAddress);
+
+      const totalSupply = await ewolTokenInstance.totalSupply()
+      console.log("ERC20 Ewol Token Total Supply:", totalSupply.toNumber());
+
+      expect(ewolTokenAddress)
+        .to.be.a.properAddress;
+      expect(ewolTokenAddress)
+        .to.not.equal(hre.ethers.constants.AddressZero);
+    });
+
+    it("Shall return the balance owned by the ERC20 contract at the initial mint", async function() {
+      const ERC20contractBalance = await ewolTokenInstance.balanceOf(ewolTokenInstance.address)
+      console.log("ERC20 Contract Balance of EWTK:",ERC20contractBalance.toNumber())
+      const totalSupply = await ewolTokenInstance.totalSupply()
+      expect(ERC20contractBalance).to.equal(totalSupply);
+    })
+
+    it("Shall mint Tokens to an specific address & return the correct balance", async function() {
+      const firstInvestorAddress = sigInstances.firstInvestor.address;
+      const newMintTx = await ewolTokenInstance._mintTokens(firstInvestorAddress, 200)
+      await newMintTx.wait();
+      const totalSupply = await ewolTokenInstance.totalSupply()
+      expect(totalSupply).to.equal("1200")
+
+      const investorBalance = await ewolTokenInstance.balanceOf(firstInvestorAddress);
+      expect(investorBalance).to.equal(200)
+      
+    })    
 
     it("Shall assign the Registry owner role to the contract deployer", async function () {
       const registryOwnerAddr = await registryInstance.owner();
