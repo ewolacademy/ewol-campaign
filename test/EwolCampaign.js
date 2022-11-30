@@ -92,6 +92,18 @@ describe("EwolCampaign", function () {
       
     })    
 
+    it("Shall burn Tokens of an specific address & return the correct balance", async function() {
+      const firstInvestorAddress = sigInstances.firstInvestor.address;
+      const newBurnTx = await ewolTokenInstance._burnTokens(firstInvestorAddress, 100)
+      await newBurnTx.wait();
+      const totalSupply = await ewolTokenInstance.totalSupply()
+      expect(totalSupply).to.equal("1100")
+
+      const investorBalance = await ewolTokenInstance.balanceOf(firstInvestorAddress);
+      expect(investorBalance).to.equal(100)
+      
+    })   
+
     it("Shall assign the Registry owner role to the contract deployer", async function () {
       const registryOwnerAddr = await registryInstance.owner();
 
