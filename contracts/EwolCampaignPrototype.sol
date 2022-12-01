@@ -4,23 +4,52 @@ pragma solidity >=0.8.2 < 0.9.0;
 import "./IEwolCampaignPrototype.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20.sol";
 
 /// @title Ewol Campaign Prototype
 /// @author heidrian.eth
 /// @notice This contract is used as prototype to clone each Ewol Academy Web3 Bootcamp campaign
 contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ERC20Upgradeable {
 
+  enum Period { Investment, Bootcamp, Repayment }; 
+
   /// @notice Target quantity of Ewolers to raise funding for
-  uint16 targetEwolers;
+  uint16 public targetEwolers;
 
   /// @notice Amount of currency to be raised per Ewoler
-  uint256 investmentPerEwoler;
+  uint256 public investmentPerEwoler;
   
   /// @notice Address of the ERC20 token used as campaign currency
-  address currencyToken;
+  address public currencyToken;
   
   /// @notice Number of weeks of the bootcamp
-  uint8 weeksOfBootcamp;
+  uint8 public weeksOfBootcamp;
+
+  /// @notice Current period for the campaign (Investment, Bootcamp or Repayment)
+  Period public currentPeriod;
+
+  /// @notice Total amount of currency tokens invested
+  uint256 totalInvested;
+
+  /// @notice Wallet address for each ewoler
+  mapping (uint256 => address) public ewolerAddress;
+
+  /// @notice Total amount to be released per week of Bootcamp for each ewoler
+  mapping (uint256 => uint256) public ewolerWeeklyExpenditure;
+
+  /// @notice Wallet address for each staff member
+  mapping (uint256 => address) public stafferAddress;
+
+  /// @notice Total amount to be released per week of Bootcamp for each staff member
+  mapping (uint256 => uint256) public stafferWeeklyExpenditure;
+
+  /// @notice Total amount to be released per week for ewolers and staff members
+  uint256 totalWeeklyExpenditure;
+
+  modifier onlyPeriod (Period _period) {
+    require(currentPeriod == _period, "Method not available for this period");
+    _;
+  }
 
   /// @notice Initialize the new campaign
   /// @dev 
@@ -55,6 +84,8 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
 
     // Sets the campaign owner
     _transferOwnership(_owner);
+
+    currentPeriod = Period.Investment;
   }
 
   /// @notice Total to invest in this campaign
@@ -71,9 +102,12 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   function depositInvestment (
     address _depositToken,
     uint256 _amount
-  ) public virtual override {
-    
-    
+  ) public virtual override onlyPeriod(Period.Investment) {
+    require(currencyToken == _depositToken, "Deposit token not supported");
+    require(_amount <= investmentCap() - totalInvested, "Deposit exceeds investment cap");
+    SafeERC20.safeTransferFrom(IERC20(_depositToken), msg.sender, address(this), _amount);
+    totalInvested += _amount;
+    _mint(msg.sender, _amount);
   }
 
   /// @notice Enroll an Ewoler in the campaign
@@ -84,9 +118,12 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     uint256 _ewolerId,
     address _ewolerAddress,
     uint256 _weeklyExpenditure
-  ) public virtual override {
-    
-    
+  ) public virtual override onlyOwner onlyPeriod(Period.Investment) {
+    require(_ewolerAddress != address(0), "Ewoler address can't be zero");
+    require(ewolerAddress[_ewolerId] == address(0), "Ewoler already enrolled");
+    ewolerAddress[_ewolerId] = _ewolerAddress;
+    ewolerWeeklyExpenditure[_ewolerId] = _weeklyExpenditure;
+    totalWeeklyExpenditure += _weeklyExpenditure;
   }
 
   /// @notice Enroll an Ewol Staff Member in the campaign
@@ -99,32 +136,52 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     address _stafferAddress,
     uint256 _weeklyExpenditure,
     uint256 _variableComp
-  ) public virtual override {
-    
-    
+  ) public virtual override onlyOwner onlyPeriod(Period.Investment) {
+    require(_stafferAddress != address(0), "Staffer address can't be zero");
+    require(stafferAddress[_stafferId] == address(0), "Staffer already enrolled");
+    stafferAddress[_stafferId] = _stafferAddress;
+    stafferWeeklyExpenditure[_stafferId] = _weeklyExpenditure;
+    _mint(_stafferAddress, _variableComp);
+    totalWeeklyExpenditure += _weeklyExpenditure;
   }
 
   /// @notice Remove an Ewoler from the campaign
   /// @param _ewolerId          ID for the ewoler
   function removeEwoler (
     uint256 _ewolerId
-  ) public virtual override {
-    
+  ) public virtual override onlyOwner {
+    require(currentPeriod != Period.Repayment, "Bootcamp already concluded");
+    require(ewolerAddress[_ewolerId] != address(0), "Staffer was never enrolled");
+
+    ewolerAddress[_ewolerId] = address(0);
+
+    uint256 _weeklyExpenditure = ewolerWeeklyExpenditure[_ewolerId];
+    ewolerWeeklyExpenditure[_ewolerId] = 0;
+    totalWeeklyExpenditure -= _weeklyExpenditure;
   }
 
   /// @notice Remove an Ewol Staff Member from the campaign
   /// @param _stafferId         ID for the staffer
   function removeStaff (
     uint256 _stafferId
-  ) public virtual override {
-    
-    
+  ) public virtual override onlyOwner {
+    require(currentPeriod != Period.Repayment, "Bootcamp already concluded");
+    require(stafferAddress[_stafferId] != address(0), "Staffer was never enrolled");
+
+    address _stafferAddress = stafferAddress[_stafferId];
+    stafferAddress[_stafferId] = address(0);
+
+    uint256 _weeklyExpenditure = stafferWeeklyExpenditure[_stafferId];
+    stafferWeeklyExpenditure[_stafferId] = 0;
+    totalWeeklyExpenditure -= _weeklyExpenditure;
+
+    _burn(_stafferAddress, balanceOf(_stafferAddress));    
   }
 
   /// @notice Start the Bootcamp period
-  function startBootcamp () public virtual override {
-    
-    
+  function startBootcamp () public virtual override onlyOwner onlyPeriod(Period.Investment) {
+    require(totalInvested >= totalWeeklyExpenditure * weeksOfBootcamp, "Not enough funds to start Bootcamp")
+    currentPeriod = Period.Bootcamp;
   }
 
   /// @notice Withdraw an Ewoler expenditure

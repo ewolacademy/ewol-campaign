@@ -1,4 +1,6 @@
-const { expect } = require("chai");
+const {
+  expect
+} = require("chai");
 const hre = require("hardhat");
 
 const registryContractName = "EwolCampaignRegistry";
@@ -7,40 +9,58 @@ let registryAddress;
 
 let prototypeAddress;
 
+let stablecoinInstance;
+let stablecoinAddress;
+
+let campaignId;
+let campaignAddress;
+let campaignInstance;
+
 const sigInstances = {};
 const sigAddrs = {};
-const signerRoles = ["deployer", "nonOwner"];
-let stablecoinInstance;
-let stableContractAdress;
+const signerRoles = [
+  "deployer",
+  "nonOwner"
+];
+
 describe("EwolCampaign", function () {
   describe("EwolCampaignRegistry", function () {
-    it("Should create the stablecoins", async function () {
-      signerRoles[0] = await hre.ethers.getSigner();
-      sigInstances["deployer"] = signerRoles[0];
-      sigAddrs["deployer"] = await sigInstances["deployer"].getAddress();
+
+    it("Should initialize signers", async function () {
+      const testSigners = await hre.ethers.getSigners();
+      for (let iSigner = 0; iSigner < signerRoles.length; iSigner++) {
+        const signerRole = signerRoles[iSigner];
+        sigInstances[signerRole] = testSigners[iSigner];
+        sigAddrs[signerRole] = await sigInstances[signerRole].getAddress();
+      }
+    });
+
+    it("Should deploy the stablecoin contract", async function () {
       const stablecoinFactory = await hre.ethers.getContractFactory(
         "Stablecoin",
         sigInstances.deployer
       );
-      stablecoinInstance = await stablecoinFactory.deploy(10000);
-      stableContractAdress = await stablecoinInstance.address;
+      stablecoinInstance = await stablecoinFactory.deploy(0);
+      stablecoinAddress = await stablecoinInstance.address;
       await stablecoinInstance.deployed();
-      let deployerBalance = await stablecoinInstance.balanceOf(
-        sigAddrs["deployer"]
-      );
-      erc20Owner = await stablecoinInstance.owner();
-      expect(deployerBalance).to.equal(10000);
-      expect(erc20Owner).to.equal(sigAddrs["deployer"]);
+
+      const stablecoinSupply = await stablecoinInstance.totalSupply();
+      expect(stablecoinSupply)
+        .to.equal(0);
+
+      const stablecoinOwner = await stablecoinInstance.owner();
+      expect(stablecoinOwner)
+        .to.equal(sigAddrs.deployer);
     });
 
-    it("Should initialize signers", async function () {
-      const testSigners = await hre.ethers.getSigners();
-      for (let iSigner = 1; iSigner < signerRoles.length; iSigner++) {
+    it("Should mint stablecoins for each role", async function () {
+      for (let iSigner = 0; iSigner < signerRoles.length; iSigner++) {
         const signerRole = signerRoles[iSigner];
-        sigInstances[signerRole] = testSigners[iSigner];
-        sigAddrs[signerRole] = await sigInstances[signerRole].getAddress();
-        await stablecoinInstance.mintTokens(sigAddrs[signerRole], 10000);
-        await stablecoinInstance.balanceOf(sigAddrs[signerRole]);
+        const mintingTx = await stablecoinInstance.mintTokens(
+          sigAddrs[signerRole],
+          hre.ethers.utils.parseUnits("1000000.0", 18)
+        );
+        await mintingTx.wait();
       }
     });
 
@@ -62,23 +82,23 @@ describe("EwolCampaign", function () {
 
       console.log("Initial prototype contract deployed to:", prototypeAddress);
 
-      expect(prototypeAddress).to.be.a.properAddress;
-      expect(prototypeAddress).to.not.equal(hre.ethers.constants.AddressZero);
+      expect(prototypeAddress)
+        .to.be.a.properAddress;
+      expect(prototypeAddress)
+        .to.not.equal(hre.ethers.constants.AddressZero);
     });
 
     it("Shall assign the Registry owner role to the contract deployer", async function () {
       const registryOwnerAddr = await registryInstance.owner();
 
-      expect(registryOwnerAddr).to.equal(sigAddrs.deployer);
+      expect(registryOwnerAddr)
+        .to.equal(sigAddrs.deployer);
     });
 
     it("Shall enable the owner to launch a new campaign", async function () {
       const campaignName = "EWOL Cohorte 1";
       const targetEwolers = 25;
       const investmentPerEwoler = hre.ethers.utils.parseUnits("2000.0", 18);
-
-      const currencyToken = hre.ethers.constants.AddressZero; ////////////////////////// TO BE REPLACED
-
       const weeksOfBootcamp = 10;
       const premintAmount = hre.ethers.utils.parseUnits("5000.0", 18);
 
@@ -86,23 +106,58 @@ describe("EwolCampaign", function () {
         campaignName,
         targetEwolers,
         investmentPerEwoler,
-        currencyToken,
+        stablecoinAddress,
         weeksOfBootcamp,
         premintAmount
       );
-      await launchTx.wait();
+      const launchTxReceipt = await launchTx.wait();
+
+      const campaignLaunchedEvent = launchTxReceipt.events.find(event => event.event === 'CampaignLaunched');
+      [campaignId, campaignAddress] = campaignLaunchedEvent.args;
+
+      expect(campaignId)
+        .to.equal(0);
+      expect(campaignAddress)
+        .to.be.a.properAddress;
+      expect(campaignAddress)
+        .to.not.equal(hre.ethers.constants.AddressZero);
+
+      const campaignFactory = await hre.ethers.getContractFactory(
+        'EwolCampaignPrototype',
+        sigInstances.deployer
+      );
+      campaignInstance = campaignFactory.attach(campaignAddress);
+
+      expect(await campaignInstance.name())
+        .to.equal(campaignName);
+      expect(await campaignInstance.targetEwolers())
+        .to.equal(targetEwolers);
+      expect(await campaignInstance.investmentPerEwoler())
+        .to.equal(investmentPerEwoler);
+      expect(await campaignInstance.currencyToken())
+        .to.equal(stablecoinAddress);
+      expect(await campaignInstance.weeksOfBootcamp())
+        .to.equal(weeksOfBootcamp);
+
+      expect(await campaignInstance.totalSupply())
+        .to.equal(premintAmount);
+      expect(await campaignInstance.balanceOf(sigAddrs.deployer))
+        .to.equal(premintAmount);
+
+      expect(await campaignInstance.owner())
+        .to.equal(sigAddrs.deployer);
+
+      expect(await campaignInstance.investmentCap())
+        .to.equal(investmentPerEwoler.mul(targetEwolers));
     });
 
-    // it("Shall prevent a non owner from launching a new campaign", async function () {
+    it("Shall prevent a non owner from launching a new campaign", async function () {
+      const registryInstanceForNonOwner = registryInstance.connect(sigInstances.nonOwner);
+      const failedLaunchTxNonOwner = registryInstanceForNonOwner
+        .launchCampaign("", 0, 0, stablecoinAddress, 0, 0);
 
-    // });
-
-    // TODO for tomorrow
-    // Code a stablecoin contract:
-    //  ERC20
-    //  Ownable
-    //  Mint method for owner
-    //  Burn method for owner
-    //  Add stablecoin deploy to tests initialization and store the address
+      expect(failedLaunchTxNonOwner)
+        .to.be.revertedWith("Ownable: caller is not the owner");
+    });
   });
 });

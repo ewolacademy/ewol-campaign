@@ -14,8 +14,6 @@ interface IEwolCampaignRegistry {
   /// @param _currencyToken       Address of the ERC20 token used as campaign currency
   /// @param _weeksOfBootcamp     Number of weeks of the bootcamp
   /// @param _premintAmount       Amount of campaign tokens preminted for the campaign launcher
-  /// @return _campaignId         ID of the campaign
-  ///         _campaignAddress    Campaign contract address
   function launchCampaign (
     string calldata _campaignName,
     uint16 _targetEwolers,
@@ -23,7 +21,7 @@ interface IEwolCampaignRegistry {
     address _currencyToken,
     uint8 _weeksOfBootcamp,
     uint256 _premintAmount
-  ) external returns (uint256, address);
+  ) external;
 
   /// @notice Update the protype contract address to be cloned on launch
   /// @param _implementation      Prototype contract address
