@@ -21,7 +21,9 @@ const sigInstances = {};
 const sigAddrs = {};
 const signerRoles = [
   "deployer",
-  "nonOwner"
+  "nonOwner",
+  "ewoler",
+  "staffMember"
 ];
 
 describe("EwolCampaign", function () {
@@ -122,7 +124,7 @@ describe("EwolCampaign", function () {
         .to.equal(sigAddrs.deployer);
     });
 
-    it("Shall enable the owner to launch a new campaign", async function () {
+      it("Shall enable the owner to launch a new campaign", async function () {
       const campaignName = "EWOL Cohorte 1";
       const targetEwolers = 25;
       const investmentPerEwoler = hre.ethers.utils.parseUnits("2000.0", 18);
@@ -186,5 +188,43 @@ describe("EwolCampaign", function () {
       expect(failedLaunchTxNonOwner)
         .to.be.revertedWith("Ownable: caller is not the owner");
     });
+
+    it("Should allow from owner to enroll a new Ewoler", async function(){
+      const ewolerId = 1
+      const EwolerWeeklyExpenditure = 100;
+      const enrollTx = await campaignInstance.enrollEwoler(ewolerId, sigAddrs.ewoler, EwolerWeeklyExpenditure);
+      const ewolerAddr = await campaignInstance.ewolerAddress(ewolerId);
+      const ewolerWeeklyExpenditure = await campaignInstance.ewolerWeeklyExpenditure(ewolerId);
+      const totalWeekExpenditure = await campaignInstance.totalWeeklyExpenditure();
+
+      expect(ewolerAddr).to.equal(sigAddrs.ewoler); 
+      expect(ewolerWeeklyExpenditure).to.equal(EwolerWeeklyExpenditure);
+      expect(totalWeekExpenditure).to.equal(EwolerWeeklyExpenditure);
+    })
+
+    it("Should allow from owner to enroll a new Staff member", async function(){
+      const staffMemberId = 1;
+      const staffMemberAddress = sigAddrs.staffMember;
+      const staffMemberWeaklyExpenditure = 400;
+      const staffMemberMintOnEnroll = hre.ethers.utils.parseUnits("5000000.0", 18);
+
+      const enrollStaffTx = await campaignInstance.enrollStaff(staffMemberId, staffMemberAddress, staffMemberWeaklyExpenditure, staffMemberMintOnEnroll);
+      const staffMemberAddr = await campaignInstance.stafferAddress(staffMemberId);
+      const staffMemberWeaklyExp = await campaignInstance.stafferWeeklyExpenditure(staffMemberId);
+      const totalWeaklyExp = await campaignInstance.totalWeeklyExpenditure();
+
+      expect(staffMemberAddr).to.equal(staffMemberAddress);
+      expect(staffMemberWeaklyExp).to.equal(staffMemberWeaklyExpenditure);
+      expect(totalWeaklyExp).to.equal(staffMemberWeaklyExpenditure + 100);
+    })
+
+    it("Should mint to the staff member ERC20 tokens while enrolling", async function(){
+      const staffMemberMintOnEnroll = hre.ethers.utils.parseUnits("5000000.0", 18);
+      const staffMemberERC20TokenBalance = await campaignInstance.balanceOf(sigAddrs.staffMember);
+
+      expect(staffMemberERC20TokenBalance).to.equal(staffMemberMintOnEnroll);
+    })
   });
+
+  
 });
