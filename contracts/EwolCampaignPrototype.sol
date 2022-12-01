@@ -4,14 +4,15 @@ pragma solidity >=0.8.2 < 0.9.0;
 import "./IEwolCampaignPrototype.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 /// @title Ewol Campaign Prototype
 /// @author heidrian.eth
 /// @notice This contract is used as prototype to clone each Ewol Academy Web3 Bootcamp campaign
 contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ERC20Upgradeable {
 
-  enum Period { Investment, Bootcamp, Repayment }; 
+  enum Period { Investment, Bootcamp, Repayment }
 
   /// @notice Target quantity of Ewolers to raise funding for
   uint16 public targetEwolers;
@@ -105,7 +106,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   ) public virtual override onlyPeriod(Period.Investment) {
     require(currencyToken == _depositToken, "Deposit token not supported");
     require(_amount <= investmentCap() - totalInvested, "Deposit exceeds investment cap");
-    SafeERC20.safeTransferFrom(IERC20(_depositToken), msg.sender, address(this), _amount);
+    SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(_depositToken), msg.sender, address(this), _amount);
     totalInvested += _amount;
     _mint(msg.sender, _amount);
   }
@@ -180,7 +181,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
 
   /// @notice Start the Bootcamp period
   function startBootcamp () public virtual override onlyOwner onlyPeriod(Period.Investment) {
-    require(totalInvested >= totalWeeklyExpenditure * weeksOfBootcamp, "Not enough funds to start Bootcamp")
+    require(totalInvested >= totalWeeklyExpenditure * weeksOfBootcamp, "Not enough funds to start Bootcamp");
     currentPeriod = Period.Bootcamp;
   }
 
