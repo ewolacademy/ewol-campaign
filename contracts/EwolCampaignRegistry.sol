@@ -25,6 +25,11 @@ contract EwolCampaignRegistry is IEwolCampaignRegistry, Ownable {
   /// @notice Array of campaings that have been launched
   Campaign[] public launchedCampaigns;
 
+  /// @notice Event emitted when a new campaign is launched
+  /// @param _campaignId         ID of the campaign
+  /// @param _campaignAddress    Campaign contract address
+  event CampaignLaunched (uint256 _campaignId, address _campaignAddress);
+
   constructor () {
     EwolCampaignPrototype campaignPrototype = new EwolCampaignPrototype();
     campaignPrototype.init("", 0, 0, address(0), 0, 0, address(this)); // Dummy initialization
@@ -39,8 +44,6 @@ contract EwolCampaignRegistry is IEwolCampaignRegistry, Ownable {
   /// @param _currencyToken       Address of the ERC20 token used as campaign currency
   /// @param _weeksOfBootcamp     Number of weeks of the bootcamp
   /// @param _premintAmount       Amount of campaign tokens preminted for the campaign launcher
-  /// @return _campaignId         ID of the campaign
-  ///         _campaignAddress    Campaign contract address
   function launchCampaign (
     string calldata _campaignName,
     uint16 _targetEwolers,
@@ -48,7 +51,7 @@ contract EwolCampaignRegistry is IEwolCampaignRegistry, Ownable {
     address _currencyToken,
     uint8 _weeksOfBootcamp,
     uint256 _premintAmount
-  ) public override onlyOwner returns (uint256, address) {
+  ) public override onlyOwner {
     EwolCampaignPrototype newCampaignContract = EwolCampaignPrototype(Clones.clone(prototypeAddress));
     newCampaignContract.init(
       _campaignName,
@@ -67,7 +70,7 @@ contract EwolCampaignRegistry is IEwolCampaignRegistry, Ownable {
     );
     uint256 _campaignId = launchedCampaigns.length;
     launchedCampaigns.push(launchedCampaign);
-    return (_campaignId, address(newCampaignContract));
+    emit CampaignLaunched(_campaignId, address(newCampaignContract));
   }
 
   /// @notice Update the protype contract address to be cloned on launch
