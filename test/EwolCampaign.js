@@ -224,6 +224,34 @@ describe("EwolCampaign", function () {
 
       expect(staffMemberERC20TokenBalance).to.equal(staffMemberMintOnEnroll);
     })
+
+    it("Should remove a ewoler", async function(){
+      const ewolerId = 1;
+      
+      const removeEwolerTx = await campaignInstance.removeEwoler(ewolerId);
+      const ewolerAddress = await campaignInstance.ewolerAddress(ewolerId);
+      const ewolerWeeklyExpenditure = await campaignInstance.ewolerWeeklyExpenditure(ewolerId);
+      const totalWeeklyExpenditure = await campaignInstance.totalWeeklyExpenditure();
+      const stafferWeeklyExpenditure = await campaignInstance.stafferWeeklyExpenditure(1);
+
+
+      expect(ewolerAddress).to.equal(hre.ethers.constants.AddressZero);
+      expect(ewolerWeeklyExpenditure).to.equal(0);
+      expect(totalWeeklyExpenditure).to.equal(stafferWeeklyExpenditure);
+    })
+
+    it("Should remove a staff member", async function(){
+      const staffMemberId = 1;
+
+      const removeStaffMemberTx = await campaignInstance.removeStaff(staffMemberId);
+      const stafferAddress = await campaignInstance.stafferAddress(staffMemberId);
+      const stafferWeeklyExpenditure = await campaignInstance.stafferWeeklyExpenditure(staffMemberId);
+      const totalWeeklyExpenditure = await campaignInstance.totalWeeklyExpenditure();
+
+      expect(stafferAddress).to.equal(hre.ethers.constants.AddressZero);
+      expect(stafferWeeklyExpenditure).to.equal(0);
+      expect(totalWeeklyExpenditure).to.equal(0);
+    })
   });
 
   
