@@ -9,6 +9,9 @@ let registryAddress;
 
 let prototypeAddress;
 
+let stablecoinInstance;
+let stablecoinAddress;
+
 const sigInstances = {};
 const sigAddrs = {};
 const signerRoles = [
@@ -20,6 +23,7 @@ describe("EwolCampaign", function () {
 
   describe("EwolCampaignRegistry", function () {
 
+  
     it('Should initialize signers', async function () {
       const testSigners = await hre.ethers.getSigners();
       for (let iSigner = 0; iSigner < signerRoles.length; iSigner++) {
@@ -29,6 +33,31 @@ describe("EwolCampaign", function () {
       }
     });
 
+
+    it("Should deploy the ERC20", async function(){
+      const ERC2OFactory = await hre.ethers.getContractFactory("ERC20Prototype", sigInstances.deployer);
+      stablecoinInstance = await ERC2OFactory.deploy();
+      await stablecoinInstance.deployed();
+
+      stablecoinAddress = stablecoinInstance.address;
+      console.log("ERC20StableCoin deployed to: ", stablecoinAddress);
+    })
+
+
+    it("Shall mint stablecoins for each role", async function(){
+      const testSigners = await hre.ethers.getSigners();
+      for (let iSigner = 0; iSigner < signerRoles.length; iSigner++) {
+        const signerRole = signerRoles[iSigner];
+        sigInstances[signerRole] = testSigners[iSigner];
+        sigAddrs[signerRole] = await sigInstances[signerRole].getAddress();
+        let mintTx = await stablecoinInstance.freeMint(sigAddrs[signerRole], 10000);
+        mintTx.wait()
+
+        expect(await stablecoinInstance.balanceOf(sigAddrs[signerRole])).to.equal(10000);
+      }
+    })
+
+    
     it("Shall deploy the Registry contract which deploys an initial prototype", async function () {
       const registryFactory = await hre.ethers.getContractFactory(registryContractName, sigInstances.deployer);
       registryInstance = await registryFactory.deploy();
@@ -71,7 +100,7 @@ describe("EwolCampaign", function () {
         campaignName,
         targetEwolers,
         investmentPerEwoler,
-        currencyToken,
+        stablecoinAddress,
         weeksOfBootcamp,
         premintAmount
       );
