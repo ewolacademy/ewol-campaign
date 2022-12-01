@@ -81,7 +81,7 @@ describe("EwolCampaign", function () {
     })
 
     it("Shall mint Tokens to an specific address & return the correct balance", async function() {
-      const firstInvestorAddress = sigInstances.firstInvestor.address;
+      const firstInvestorAddress = sigAddrs.firstInvestor;
       const newMintTx = await ewolTokenInstance._mintTokens(firstInvestorAddress, 200)
       await newMintTx.wait();
       const totalSupply = await ewolTokenInstance.totalSupply()
@@ -93,7 +93,7 @@ describe("EwolCampaign", function () {
     })    
 
     it("Shall burn Tokens of an specific address & return the correct balance", async function() {
-      const firstInvestorAddress = sigInstances.firstInvestor.address;
+      const firstInvestorAddress = sigAddrs.firstInvestor;
       const newBurnTx = await ewolTokenInstance._burnTokens(firstInvestorAddress, 100)
       await newBurnTx.wait();
       const totalSupply = await ewolTokenInstance.totalSupply()
