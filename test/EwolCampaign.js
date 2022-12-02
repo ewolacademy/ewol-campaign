@@ -486,13 +486,3 @@ describe("EwolCampaign", function () {
     });
   });
 });
-/* function depositInvestment (
-    address _depositToken,
-    uint256 _amount
-  ) public virtual override onlyPeriod(Period.Investment) {
-    require(currencyToken == _depositToken, "Deposit token not supported");
-    require(_amount <= investmentCap() - totalInvested, "Deposit exceeds investment cap");
-    SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(_depositToken), msg.sender, address(this), _amount);
-    totalInvested += _amount;
-    _mint(msg.sender, _amount);
-  }*/
