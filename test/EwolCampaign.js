@@ -1,6 +1,4 @@
-const {
-  expect
-} = require("chai");
+const { expect } = require("chai");
 const hre = require("hardhat");
 
 const registryContractName = "EwolCampaignRegistry";
@@ -20,12 +18,15 @@ const sigInstances = {};
 const sigAddrs = {};
 const signerRoles = [
   "deployer",
-  "nonOwner"
+  "nonOwner",
+  "ewoler",
+  "staff",
+  "investor",
+  "secondInvestor",
 ];
 
 describe("EwolCampaign", function () {
   describe("EwolCampaignRegistry", function () {
-
     it("Should initialize signers", async function () {
       const testSigners = await hre.ethers.getSigners();
       for (let iSigner = 0; iSigner < signerRoles.length; iSigner++) {
@@ -45,12 +46,10 @@ describe("EwolCampaign", function () {
       await stablecoinInstance.deployed();
 
       const stablecoinSupply = await stablecoinInstance.totalSupply();
-      expect(stablecoinSupply)
-        .to.equal(0);
+      expect(stablecoinSupply).to.equal(0);
 
       const stablecoinOwner = await stablecoinInstance.owner();
-      expect(stablecoinOwner)
-        .to.equal(sigAddrs.deployer);
+      expect(stablecoinOwner).to.equal(sigAddrs.deployer);
     });
 
     it("Should mint stablecoins for each role", async function () {
@@ -82,17 +81,14 @@ describe("EwolCampaign", function () {
 
       console.log("Initial prototype contract deployed to:", prototypeAddress);
 
-      expect(prototypeAddress)
-        .to.be.a.properAddress;
-      expect(prototypeAddress)
-        .to.not.equal(hre.ethers.constants.AddressZero);
+      expect(prototypeAddress).to.be.a.properAddress;
+      expect(prototypeAddress).to.not.equal(hre.ethers.constants.AddressZero);
     });
 
     it("Shall assign the Registry owner role to the contract deployer", async function () {
       const registryOwnerAddr = await registryInstance.owner();
 
-      expect(registryOwnerAddr)
-        .to.equal(sigAddrs.deployer);
+      expect(registryOwnerAddr).to.equal(sigAddrs.deployer);
     });
 
     it("Shall enable the owner to launch a new campaign", async function () {
@@ -112,52 +108,228 @@ describe("EwolCampaign", function () {
       );
       const launchTxReceipt = await launchTx.wait();
 
-      const campaignLaunchedEvent = launchTxReceipt.events.find(event => event.event === 'CampaignLaunched');
+      const campaignLaunchedEvent = launchTxReceipt.events.find(
+        (event) => event.event === "CampaignLaunched"
+      );
       [campaignId, campaignAddress] = campaignLaunchedEvent.args;
 
-      expect(campaignId)
-        .to.equal(0);
-      expect(campaignAddress)
-        .to.be.a.properAddress;
-      expect(campaignAddress)
-        .to.not.equal(hre.ethers.constants.AddressZero);
+      expect(campaignId).to.equal(0);
+      expect(campaignAddress).to.be.a.properAddress;
+      expect(campaignAddress).to.not.equal(hre.ethers.constants.AddressZero);
 
       const campaignFactory = await hre.ethers.getContractFactory(
-        'EwolCampaignPrototype',
+        "EwolCampaignPrototype",
         sigInstances.deployer
       );
       campaignInstance = campaignFactory.attach(campaignAddress);
 
-      expect(await campaignInstance.name())
-        .to.equal(campaignName);
-      expect(await campaignInstance.targetEwolers())
-        .to.equal(targetEwolers);
-      expect(await campaignInstance.investmentPerEwoler())
-        .to.equal(investmentPerEwoler);
-      expect(await campaignInstance.currencyToken())
-        .to.equal(stablecoinAddress);
-      expect(await campaignInstance.weeksOfBootcamp())
-        .to.equal(weeksOfBootcamp);
+      expect(await campaignInstance.name()).to.equal(campaignName);
+      expect(await campaignInstance.targetEwolers()).to.equal(targetEwolers);
+      expect(await campaignInstance.investmentPerEwoler()).to.equal(
+        investmentPerEwoler
+      );
+      expect(await campaignInstance.currencyToken()).to.equal(
+        stablecoinAddress
+      );
+      expect(await campaignInstance.weeksOfBootcamp()).to.equal(
+        weeksOfBootcamp
+      );
 
-      expect(await campaignInstance.totalSupply())
-        .to.equal(premintAmount);
-      expect(await campaignInstance.balanceOf(sigAddrs.deployer))
-        .to.equal(premintAmount);
+      expect(await campaignInstance.totalSupply()).to.equal(premintAmount);
+      expect(await campaignInstance.balanceOf(sigAddrs.deployer)).to.equal(
+        premintAmount
+      );
 
-      expect(await campaignInstance.owner())
-        .to.equal(sigAddrs.deployer);
+      expect(await campaignInstance.owner()).to.equal(sigAddrs.deployer);
 
-      expect(await campaignInstance.investmentCap())
-        .to.equal(investmentPerEwoler.mul(targetEwolers));
+      expect(await campaignInstance.investmentCap()).to.equal(
+        investmentPerEwoler.mul(targetEwolers)
+      );
     });
 
     it("Shall prevent a non owner from launching a new campaign", async function () {
-      const registryInstanceForNonOwner = registryInstance.connect(sigInstances.nonOwner);
-      const failedLaunchTxNonOwner = registryInstanceForNonOwner
-        .launchCampaign("", 0, 0, stablecoinAddress, 0, 0);
+      const registryInstanceForNonOwner = registryInstance.connect(
+        sigInstances.nonOwner
+      );
+      const failedLaunchTxNonOwner = registryInstanceForNonOwner.launchCampaign(
+        "",
+        0,
+        0,
+        stablecoinAddress,
+        0,
+        0
+      );
 
-      expect(failedLaunchTxNonOwner)
-        .to.be.revertedWith("Ownable: caller is not the owner");
+      expect(failedLaunchTxNonOwner).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+    });
+    it("Shall allow to enrol an ewoler", async function () {
+      const createEwolerTx = await campaignInstance.enrollEwoler(
+        0,
+        sigAddrs.ewoler,
+        hre.ethers.utils.parseUnits("75.0", 18)
+      );
+      createEwolerTx.wait();
+      expect(await campaignInstance.ewolerAddress(0)).to.not.equal(
+        hre.ethers.constants.AddressZero
+      );
+      expect(await campaignInstance.ewolerWeeklyExpenditure(0)).to.not.equal(0);
+    });
+    it("Shall prevent a non owner from create a new ewoler", async function () {
+      const campaignInstanceForNonOwner = campaignInstance.connect(
+        sigInstances.nonOwner
+      );
+      const failedEnrollTxNonOwner = campaignInstanceForNonOwner.enrollEwoler(
+        1,
+        sigAddrs.ewoler,
+        hre.ethers.utils.parseUnits("75.0", 18)
+      );
+      expect(failedEnrollTxNonOwner).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+    });
+    it("Shall prevent to enroll an ewoler that already exist", async function () {
+      const createEwolerTx = campaignInstance.enrollEwoler(
+        0,
+        sigAddrs.ewoler,
+        hre.ethers.utils.parseUnits("75.0", 18)
+      );
+
+      expect(createEwolerTx).to.be.revertedWith("Ewoler already enrolled");
+    });
+    it("Shall allow to enroll a staff-member", async function () {
+      const enrollStaffTx = await campaignInstance.enrollStaff(
+        0,
+        sigAddrs.staff,
+        hre.ethers.utils.parseUnits("75.0", 18),
+        hre.ethers.utils.parseUnits("50.0", 18)
+      );
+      enrollStaffTx.wait();
+      expect(await campaignInstance.stafferAddress(0)).to.not.equal(
+        hre.ethers.constants.AddressZero
+      );
+      expect(await campaignInstance.stafferWeeklyExpenditure(0)).to.not.equal(
+        0
+      );
+    });
+    it("Shall prevent a non owner from create a new staff-member", async function () {
+      const campaignInstanceForNonOwner = campaignInstance.connect(
+        sigInstances.nonOwner
+      );
+      const failedEnrollStaffTxNonOwner =
+        campaignInstanceForNonOwner.enrollStaff(
+          1,
+          sigAddrs.ewoler,
+          hre.ethers.utils.parseUnits("75.0", 18),
+          hre.ethers.utils.parseUnits("50.0", 18)
+        );
+      expect(failedEnrollStaffTxNonOwner).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+    });
+    it("Shall prevent to enroll a staff-member that already exist", async function () {
+      const enrollStaffTx = campaignInstance.enrollStaff(
+        0,
+        sigAddrs.ewoler,
+        hre.ethers.utils.parseUnits("75.0", 18),
+        hre.ethers.utils.parseUnits("50.0", 18)
+      );
+
+      expect(enrollStaffTx).to.be.revertedWith("Ewoler already enrolled");
+      expect();
+    });
+    it("Shall allow to deposit investment ", async function () {
+      const firstInvestorInstance = await campaignInstance.connect(
+        sigInstances.investor
+      );
+      const investorStablecoinInstance = await stablecoinInstance.connect(
+        sigInstances.investor
+      );
+      const approveToSpend = await investorStablecoinInstance.approve(
+        campaignAddress,
+        hre.ethers.utils.parseUnits("2000.0", 18)
+      );
+      await approveToSpend.wait();
+      const investmentTx = await firstInvestorInstance.depositInvestment(
+        stablecoinAddress,
+        hre.ethers.utils.parseUnits("2000.0", 18)
+      );
+      await investmentTx.wait();
+
+      const totalInvestedOnCampaign = await campaignInstance.totalInvested();
+      expect(totalInvestedOnCampaign).to.equal(
+        hre.ethers.utils.parseUnits("2000.0", 18)
+      );
+      it("Shall allow to deposit investment only on Investment period ", async function () {
+        const changeOfPeriod = await campaignInstance.startBootcamp();
+        const firstInvestorInstance = await campaignInstance.connect(
+          sigInstances.investor
+        );
+        const investorStablecoinInstance = await stablecoinInstance.connect(
+          sigInstances.investor
+        );
+        const approveToSpend = await investorStablecoinInstance.approve(
+          campaignAddress,
+          hre.ethers.utils.parseUnits("2000.0", 18)
+        );
+        await approveToSpend.wait();
+        const investmentTx = firstInvestorInstance.depositInvestment(
+          stablecoinAddress,
+          hre.ethers.utils.parseUnits("2000.0", 18)
+        );
+        expect(investmentTx).to.be.revertedWith(
+          "Method not available for this period"
+        );
+      });
+
+      it("Shall allow to deposit no more than investCap ", async function () {
+        const secondInvestorInstance = await campaignInstance.connect(
+          sigInstances.secondInvestor
+        );
+        const secondInvestorStablecoinInstance =
+          await stablecoinInstance.connect(sigInstances.secondInvestor);
+        const approveToSpend = await secondInvestorStablecoinInstance.approve(
+          campaignAddress,
+          hre.ethers.utils.parseUnits("200000.0", 18)
+        );
+        await approveToSpend.wait();
+        const investmentTx = secondInvestorInstance.depositInvestment(
+          stablecoinAddress,
+          hre.ethers.utils.parseUnits("200000.0", 18)
+        );
+        expect(investmentTx).to.be.revertedWith(
+          "Deposit exceeds investment cap"
+        );
+      });
+      it("Shall allow to deposit no more than investCap ", async function () {
+        await setCurrencyToken(stablecoinAddress);
+        const secondInvestorInstance = await campaignInstance.connect(
+          sigInstances.secondInvestor
+        );
+        const secondInvestorStablecoinInstance =
+          await stablecoinInstance.connect(sigInstances.secondInvestor);
+        const approveToSpend = await secondInvestorStablecoinInstance.approve(
+          campaignAddress,
+          hre.ethers.utils.parseUnits("200.0", 18)
+        );
+        await approveToSpend.wait();
+        const investmentTx = secondInvestorInstance.depositInvestment(
+          stablecoinAddress,
+          hre.ethers.utils.parseUnits("200.0", 18)
+        );
+        expect(investmentTx).to.be.revertedWith("Deposit token not supported");
+      });
     });
   });
 });
+/* function depositInvestment (
+    address _depositToken,
+    uint256 _amount
+  ) public virtual override onlyPeriod(Period.Investment) {
+    require(currencyToken == _depositToken, "Deposit token not supported");
+    require(_amount <= investmentCap() - totalInvested, "Deposit exceeds investment cap");
+    SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(_depositToken), msg.sender, address(this), _amount);
+    totalInvested += _amount;
+    _mint(msg.sender, _amount);
+  }*/
