@@ -44,7 +44,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   mapping (uint256 => uint256) public stafferWeeklyExpenditure;
 
   /// @notice Total amount to be released per week for ewolers and staff members
-  uint256 totalWeeklyExpenditure;
+  uint256 public totalWeeklyExpenditure;
 
   modifier onlyPeriod (Period _period) {
     require(currentPeriod == _period, "Method not available for this period");

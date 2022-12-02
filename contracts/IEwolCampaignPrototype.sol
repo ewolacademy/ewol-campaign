@@ -16,7 +16,7 @@ interface IEwolCampaignPrototype {
   /// @param _premintAmount       Amount of campaign tokens preminted for the campaign launcher
   /// @param _owner               The initial campaign owner
   function init (
-    string memory _campaignName,
+    string calldata _campaignName,
     uint16 _targetEwolers,
     uint256 _investmentPerEwoler,
     address _currencyToken,
