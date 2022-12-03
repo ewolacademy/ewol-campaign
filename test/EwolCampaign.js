@@ -1,6 +1,7 @@
 const {expect} = require("chai");
 const hre = require("hardhat");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
+const { weeks, days } = require("@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration");
 
 const registryContractName = "EwolCampaignRegistry";
 let registryInstance;
@@ -486,7 +487,7 @@ describe("EwolCampaign", function () {
 
     it("Should return 0 Pending Expenditure for Ewoler/Staff if bootcamp time < 1 week", async function() {
 
-      await helpers.time.increase(172800); // Increase time 2 days (172800 seg)
+      await helpers.time.increase(days(2)); // Increase time 2 days
 
       const ewolerPendingExpenditure = await campaignInstance.pendingEwolerExpenditure(0);
       expect(ewolerPendingExpenditure).to.equal(0)
@@ -502,7 +503,7 @@ describe("EwolCampaign", function () {
       const FirstStaffWeeklyExpenditure = await campaignInstance.stafferWeeklyExpenditure(0)
       
       //Ewoler - Staffer Pending Expenditure after 1 week
-      await helpers.time.increase(604800); // Increase time 7 days
+      await helpers.time.increase(days(7)); // Increase time 7 days
       const ewolerPendingExpenditureFirstWeek = await campaignInstance.pendingEwolerExpenditure(0);
       expect(ewolerPendingExpenditureFirstWeek).to.equal(FirstEwolerWeeklyExpenditure)
       
@@ -510,7 +511,7 @@ describe("EwolCampaign", function () {
       expect(staffPendingExpenditureFirstWeek).to.equal(FirstStaffWeeklyExpenditure)
 
       //Ewoler - Staffer Pending Expenditure after 2 weeks
-      await helpers.time.increase(604800); // Increase time another 7 days
+      await helpers.time.increase(days(7)); // Increase time another 7 days
       const ewolerPendingExpenditureSecondWeek = await campaignInstance.pendingEwolerExpenditure(0);
       expect(ewolerPendingExpenditureSecondWeek).to.equal(FirstEwolerWeeklyExpenditure.mul(2))
       
@@ -541,19 +542,19 @@ describe("EwolCampaign", function () {
 
       //Mapping of ewolers whithdraw should sum the new withdraw amount
       expect(ewolerTotalWithdrawalAfter.sub(ewolerTotalWithdrawalBefore))
-      .to.equal(ewolerPendingExpenditure)
+        .to.equal(ewolerPendingExpenditure)
 
       //Mapping of total whithdraws (ewolers + staff) should sum the new withdraw amount
       expect(totalExpendituresWithdrawnAfter.sub(totalExpendituresWithdrawnBefore))
-      .to.equal(ewolerPendingExpenditure)
+        .to.equal(ewolerPendingExpenditure)
 
       // Ewoler Stablecoin balance should have increase the withdrawn amount
       expect(stablecoinBalanceOfEwolerAfter.sub(stablecoinBalanceOfEwolerBefore)).
-      to.equal(ewolerPendingExpenditure)
+        to.equal(ewolerPendingExpenditure)
 
       // Campaign Stablecoin balance should have decrease the withdrawn amount
       expect(stablecoinBalanceOfCampaingBefore.sub(stablecoinBalanceOfCampaingAfter)).
-      to.equal(ewolerPendingExpenditure)
+        to.equal(ewolerPendingExpenditure)
 
     })
 
@@ -577,20 +578,49 @@ describe("EwolCampaign", function () {
 
       //Mapping of staffer whithdraw should sum the new withdraw amount
       expect(stafferTotalWithdrawalAfter.sub(stafferTotalWithdrawalBefore))
-      .to.equal(stafferPendingExpenditure)
+        .to.equal(stafferPendingExpenditure)
 
       //Mapping of total whithdraws (ewolers + staff) should sum the new withdraw amount
       expect(totalExpendituresWithdrawnAfter.sub(totalExpendituresWithdrawnBefore))
-      .to.equal(stafferPendingExpenditure)
+        .to.equal(stafferPendingExpenditure)
 
       // Staffer Stablecoin balance should have increase the withdrawn amount
       expect(stablecoinBalanceOfStafferAfter.sub(stablecoinBalanceOfStafferBefore)).
-      to.equal(stafferPendingExpenditure)
+        to.equal(stafferPendingExpenditure)
 
       // Campaign Stablecoin balance should have decrease the withdrawn amount
       expect(stablecoinBalanceOfCampaingBefore.sub(stablecoinBalanceOfCampaingAfter)).
-      to.equal(stafferPendingExpenditure)
+        to.equal(stafferPendingExpenditure)
     })
+
+    it("Should not allow to Finish Bootcamp if Weeks Elapsed < WeeksOfBootcamp", async function() {
+
+      const failedFinishBootcampTx = campaignInstance.finishBootcamp();
+      expect(failedFinishBootcampTx)
+        .to.be.revertedWith("Bootcamp hasn't been completed");
+    });
+
+    it("Should not allow a Non Owner to Finish Bootcamp", async function() {
+      
+      const campaignInstanceForNonOwner = campaignInstance.connect(
+        sigInstances.nonOwner);
+
+      const failedFinishBootcampTxNonOwner = campaignInstance.finishBootcamp();
+      expect(failedFinishBootcampTxNonOwner)
+      .to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+    });
+
+    it("Should Finish Bootcamp & Change Period Time to 'REPAYMENT'", async function() {
+
+      await helpers.time.increase(weeks(9)); // Increase time another 9 weeks (2 had passed before)
+      const FinishBootcampTx = await campaignInstance.finishBootcamp();
+      
+      expect(await campaignInstance.currentPeriod())
+      .to.equal(PERIODS.REPAYMENT);
+
+    });
 
   });
 });
