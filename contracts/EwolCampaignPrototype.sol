@@ -248,7 +248,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(currencyToken), stafferAddress[_stafferId], _withdrawAmount);
   }
 
-  /// @notice Pending amount pending withdrawal by staffers or ewolers
+  /// @notice Pending amount withdrawal by staffers or ewolers
   function _pendingTotalExpenditure () private view returns (uint256) {
     uint256 _totalExpenditure = totalWeeklyExpenditure * _weeksOfBootcampElapsed();
     return _totalExpenditure - totalExpendituresWithdrawn;
