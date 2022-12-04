@@ -30,7 +30,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   Period public currentPeriod;
 
   /// @notice Total amount of currency tokens invested
-  uint256 totalInvested;
+  uint256 public totalInvested;
 
   /// @notice Wallet address for each ewoler
   mapping (uint256 => address) public ewolerAddress;

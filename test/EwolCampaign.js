@@ -23,7 +23,8 @@ const signerRoles = [
   "deployer",
   "nonOwner",
   "ewoler",
-  "staffMember"
+  "staffMember",
+  "invester"
 ];
 
 describe("EwolCampaign", function () {
@@ -188,7 +189,9 @@ describe("EwolCampaign", function () {
       expect(failedLaunchTxNonOwner)
         .to.be.revertedWith("Ownable: caller is not the owner");
     });
+  });
 
+  describe("EwolCampaignPrototype", function(){
     it("Should allow from owner to enroll a new Ewoler", async function(){
       const ewolerId = 1
       const EwolerWeeklyExpenditure = 100;
@@ -252,7 +255,31 @@ describe("EwolCampaign", function () {
       expect(stafferWeeklyExpenditure).to.equal(0);
       expect(totalWeeklyExpenditure).to.equal(0);
     })
-  });
+
+    it("Should allow to invest", async function(){
+      const investerAddr = sigInstances.invester;
+      const investerInstance = await campaignInstance.connect(investerAddr);
+      const investAmount = hre.ethers.utils.parseUnits("20000.0", 18);
+
+      const stablecoinBalanceForInvestorBefore = await stablecoinInstance.balanceOf(sigAddrs.invester);
+
+      const stableCoinInvestor = await stablecoinInstance.connect(sigInstances.invester);
+      const approveAmountToInvest = await stableCoinInvestor.approve(campaignAddress, investAmount);
+      approveAmountToInvest.wait();
+      const depositInvestTx = await investerInstance.depositInvestment(stablecoinAddress, investAmount);
+      depositInvestTx.wait();
+      
+      const stablecoinBalanceForInvestorAfter = await  stablecoinInstance.balanceOf(sigAddrs.invester);
+
+      const totalInvested = await campaignInstance.totalInvested();
+      expect(totalInvested).to.equal(investAmount);
+
+      expect(await campaignInstance.balanceOf(sigAddrs.invester)).to.equal(hre.ethers.utils.parseUnits("20000.0", 18));
+      
+      expect(stablecoinBalanceForInvestorBefore.sub(investAmount)).to.equal(stablecoinBalanceForInvestorAfter)
+
+    })
+  })
 
   
 });
