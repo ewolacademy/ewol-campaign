@@ -23,15 +23,10 @@ const signerRoles = [
   "deployer",
   "nonOwner",
   "ewoler",
-<<<<<<< HEAD
-  "staffMember",
-  "invester"
-=======
   "staff",
   "investor",
   "secondInvestor",
   "thirdInvestor"
->>>>>>> 8ee54b8743b7851fbef77a27e7c4d6aa8b31af72
 ];
 
 const PERIODS = Object.freeze({
@@ -40,12 +35,8 @@ const PERIODS = Object.freeze({
   REPAYMENT: 2
 });
 
-<<<<<<< HEAD
-  
-=======
 describe("EwolCampaign", function () {
   describe("Initialization", function () {
->>>>>>> 8ee54b8743b7851fbef77a27e7c4d6aa8b31af72
     it("Should initialize signers", async function () {
       const testSigners = await hre.ethers.getSigners();
       for (let iSigner = 0; iSigner < signerRoles.length; iSigner++) {
@@ -57,8 +48,8 @@ describe("EwolCampaign", function () {
 
 
     it("Should deploy the ERC20", async function(){
-      const ERC2OFactory = await hre.ethers.getContractFactory("ERC20Prototype", sigInstances.deployer);
-      stablecoinInstance = await ERC2OFactory.deploy();
+      const ERC2OFactory = await hre.ethers.getContractFactory("Stablecoin", sigInstances.deployer);
+      stablecoinInstance = await ERC2OFactory.deploy(0);
       await stablecoinInstance.deployed();
 
       stablecoinAddress = stablecoinInstance.address;
@@ -72,7 +63,7 @@ describe("EwolCampaign", function () {
         const signerRole = signerRoles[iSigner];
         sigInstances[signerRole] = testSigners[iSigner];
         sigAddrs[signerRole] = await sigInstances[signerRole].getAddress();
-        let mintTx = await stablecoinInstance.freeMint(sigAddrs[signerRole], 10000);
+        let mintTx = await stablecoinInstance.mintTokens(sigAddrs[signerRole], 10000);
         mintTx.wait()
 
         expect(await stablecoinInstance.balanceOf(sigAddrs[signerRole])).to.equal(10000);
@@ -143,11 +134,7 @@ describe("EwolCampaign", function () {
         .to.equal(sigAddrs.deployer);
     });
 
-<<<<<<< HEAD
-      it("Shall enable the owner to launch a new campaign", async function () {
-=======
     it("Should enable the owner to launch a new campaign", async function () {
->>>>>>> 8ee54b8743b7851fbef77a27e7c4d6aa8b31af72
       const campaignName = "EWOL Cohorte 1";
       const targetEwolers = 25;
       const investmentPerEwoler = hre.ethers.utils.parseUnits("2000.0", 18);
@@ -525,95 +512,4 @@ describe("EwolCampaign", function () {
     });
   });
 
-  describe("EwolCampaignPrototype", function(){
-    it("Should allow from owner to enroll a new Ewoler", async function(){
-      const ewolerId = 1
-      const EwolerWeeklyExpenditure = 100;
-      const enrollTx = await campaignInstance.enrollEwoler(ewolerId, sigAddrs.ewoler, EwolerWeeklyExpenditure);
-      const ewolerAddr = await campaignInstance.ewolerAddress(ewolerId);
-      const ewolerWeeklyExpenditure = await campaignInstance.ewolerWeeklyExpenditure(ewolerId);
-      const totalWeekExpenditure = await campaignInstance.totalWeeklyExpenditure();
-
-      expect(ewolerAddr).to.equal(sigAddrs.ewoler); 
-      expect(ewolerWeeklyExpenditure).to.equal(EwolerWeeklyExpenditure);
-      expect(totalWeekExpenditure).to.equal(EwolerWeeklyExpenditure);
-    })
-
-    it("Should allow from owner to enroll a new Staff member", async function(){
-      const staffMemberId = 1;
-      const staffMemberAddress = sigAddrs.staffMember;
-      const staffMemberWeaklyExpenditure = 400;
-      const staffMemberMintOnEnroll = hre.ethers.utils.parseUnits("5000000.0", 18);
-
-      const enrollStaffTx = await campaignInstance.enrollStaff(staffMemberId, staffMemberAddress, staffMemberWeaklyExpenditure, staffMemberMintOnEnroll);
-      const staffMemberAddr = await campaignInstance.stafferAddress(staffMemberId);
-      const staffMemberWeaklyExp = await campaignInstance.stafferWeeklyExpenditure(staffMemberId);
-      const totalWeaklyExp = await campaignInstance.totalWeeklyExpenditure();
-
-      expect(staffMemberAddr).to.equal(staffMemberAddress);
-      expect(staffMemberWeaklyExp).to.equal(staffMemberWeaklyExpenditure);
-      expect(totalWeaklyExp).to.equal(staffMemberWeaklyExpenditure + 100);
-    })
-
-    it("Should mint to the staff member ERC20 tokens while enrolling", async function(){
-      const staffMemberMintOnEnroll = hre.ethers.utils.parseUnits("5000000.0", 18);
-      const staffMemberERC20TokenBalance = await campaignInstance.balanceOf(sigAddrs.staffMember);
-
-      expect(staffMemberERC20TokenBalance).to.equal(staffMemberMintOnEnroll);
-    })
-
-    it("Should remove a ewoler", async function(){
-      const ewolerId = 1;
-      
-      const removeEwolerTx = await campaignInstance.removeEwoler(ewolerId);
-      const ewolerAddress = await campaignInstance.ewolerAddress(ewolerId);
-      const ewolerWeeklyExpenditure = await campaignInstance.ewolerWeeklyExpenditure(ewolerId);
-      const totalWeeklyExpenditure = await campaignInstance.totalWeeklyExpenditure();
-      const stafferWeeklyExpenditure = await campaignInstance.stafferWeeklyExpenditure(1);
-
-
-      expect(ewolerAddress).to.equal(hre.ethers.constants.AddressZero);
-      expect(ewolerWeeklyExpenditure).to.equal(0);
-      expect(totalWeeklyExpenditure).to.equal(stafferWeeklyExpenditure);
-    })
-
-    it("Should remove a staff member", async function(){
-      const staffMemberId = 1;
-
-      const removeStaffMemberTx = await campaignInstance.removeStaff(staffMemberId);
-      const stafferAddress = await campaignInstance.stafferAddress(staffMemberId);
-      const stafferWeeklyExpenditure = await campaignInstance.stafferWeeklyExpenditure(staffMemberId);
-      const totalWeeklyExpenditure = await campaignInstance.totalWeeklyExpenditure();
-
-      expect(stafferAddress).to.equal(hre.ethers.constants.AddressZero);
-      expect(stafferWeeklyExpenditure).to.equal(0);
-      expect(totalWeeklyExpenditure).to.equal(0);
-    })
-
-    it("Should allow to invest", async function(){
-      const investerAddr = sigInstances.invester;
-      const investerInstance = await campaignInstance.connect(investerAddr);
-      const investAmount = hre.ethers.utils.parseUnits("20000.0", 18);
-
-      const stablecoinBalanceForInvestorBefore = await stablecoinInstance.balanceOf(sigAddrs.invester);
-
-      const stableCoinInvestor = await stablecoinInstance.connect(sigInstances.invester);
-      const approveAmountToInvest = await stableCoinInvestor.approve(campaignAddress, investAmount);
-      approveAmountToInvest.wait();
-      const depositInvestTx = await investerInstance.depositInvestment(stablecoinAddress, investAmount);
-      depositInvestTx.wait();
-      
-      const stablecoinBalanceForInvestorAfter = await  stablecoinInstance.balanceOf(sigAddrs.invester);
-
-      const totalInvested = await campaignInstance.totalInvested();
-      expect(totalInvested).to.equal(investAmount);
-
-      expect(await campaignInstance.balanceOf(sigAddrs.invester)).to.equal(hre.ethers.utils.parseUnits("20000.0", 18));
-      
-      expect(stablecoinBalanceForInvestorBefore.sub(investAmount)).to.equal(stablecoinBalanceForInvestorAfter)
-
-    })
-  })
-
-  
 });
