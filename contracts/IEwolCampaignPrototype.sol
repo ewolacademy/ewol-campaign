@@ -16,7 +16,7 @@ interface IEwolCampaignPrototype {
   /// @param _premintAmount       Amount of campaign tokens preminted for the campaign launcher
   /// @param _owner               The initial campaign owner
   function init (
-    string memory _campaignName,
+    string calldata _campaignName,
     uint16 _targetEwolers,
     uint256 _investmentPerEwoler,
     address _currencyToken,
@@ -76,11 +76,23 @@ interface IEwolCampaignPrototype {
   /// @notice Start the Bootcamp period
   function startBootcamp () external;
 
+  /// @notice Pending amount to be withdrawn by the ewoler
+  /// @param _ewolerId          ID for the ewoler
+  function pendingEwolerExpenditure(
+    uint256 _ewolerId
+  ) external view returns (uint256);
+
   /// @notice Withdraw an Ewoler expenditure
   /// @param _ewolerId          ID for the ewoler
   function withdrawEwolerExpenditure (
     uint256 _ewolerId
   ) external;
+
+  /// @notice Pending amount to be withdrawn by the staffer
+  /// @param _stafferId         ID for the staffer
+  function pendingStafferExpenditure (
+    uint256 _stafferId
+  ) external view returns (uint256);
 
   /// @notice Withdraw an Ewol Staff Member expenditure
   /// @param _stafferId         ID for the staffer
