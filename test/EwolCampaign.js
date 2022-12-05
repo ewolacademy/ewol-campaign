@@ -516,38 +516,41 @@ describe("EwolCampaign", function () {
         );
     });
 
-    it("Should return 0 Pending Expenditure for Ewoler/Staff if bootcamp time < 1 week", async function() {
+    it("Should prevent the inquiry of pending Expenditure for a ewoler/staffer before transition to Bootcamp ", async function() {
 
       await helpers.time.increase(days(2)); // Increase time 2 days
 
-      const ewolerPendingExpenditure = await campaignInstance.pendingEwolerExpenditure(0);
-      expect(ewolerPendingExpenditure).to.equal(0)
+      const failedEwolerPendingExpenditure =  campaignInstance.pendingEwolerExpenditure(0);
+      expect(failedEwolerPendingExpenditure).to.be.revertedWith("Bootcamp hasn't started")
 
-      const staffPendingExpenditure = await campaignInstance.pendingEwolerExpenditure(0);
-      expect(staffPendingExpenditure).to.equal(0)
+      const failedStaffPendingExpenditure =  campaignInstance.pendingEwolerExpenditure(0);
+      expect(failedStaffPendingExpenditure).to.be.revertedWith("Bootcamp hasn't started");
       
     })
 
-    it("Should return Ewoler & Staff pending Expenditure when elapsed time > 1 week", async function () {
+    it("Should return 0 pending amount for a ewoler/staffer if time is > than 1 week", async function () {
 
-      const FirstEwolerWeeklyExpenditure = await campaignInstance.ewolerWeeklyExpenditure(0)
-      const FirstStaffWeeklyExpenditure = await campaignInstance.stafferWeeklyExpenditure(0)
+      const EwolerWeeklyExpenditure = await campaignInstance.ewolerWeeklyExpenditure(0)
+      const StaffWeeklyExpenditure = await campaignInstance.stafferWeeklyExpenditure(0)
       
-      //Ewoler - Staffer Pending Expenditure after 1 week
-      await helpers.time.increase(days(7)); // Increase time 7 days
+      //Ewoler and Staff exp after 1 week
+
+      await helpers.time.increase(days(7)); 
       const ewolerPendingExpenditureFirstWeek = await campaignInstance.pendingEwolerExpenditure(0);
-      expect(ewolerPendingExpenditureFirstWeek).to.equal(FirstEwolerWeeklyExpenditure)
+      expect(ewolerPendingExpenditureFirstWeek).to.equal(EwolerWeeklyExpenditure)
       
       const staffPendingExpenditureFirstWeek = await campaignInstance.pendingStafferExpenditure(0);
-      expect(staffPendingExpenditureFirstWeek).to.equal(FirstStaffWeeklyExpenditure)
+      expect(staffPendingExpenditureFirstWeek).to.equal(StaffWeeklyExpenditure)
 
-      //Ewoler - Staffer Pending Expenditure after 2 weeks
+      //Ewoler and Staff pending exp after 2 weeks
       await helpers.time.increase(days(7)); // Increase time another 7 days
       const ewolerPendingExpenditureSecondWeek = await campaignInstance.pendingEwolerExpenditure(0);
-      expect(ewolerPendingExpenditureSecondWeek).to.equal(FirstEwolerWeeklyExpenditure.mul(2))
+      expect(ewolerPendingExpenditureSecondWeek).to.equal(EwolerWeeklyExpenditure.mul(2))
       
       const staffPendingExpenditureSecondWeek = await campaignInstance.pendingEwolerExpenditure(0);
-      expect(staffPendingExpenditureSecondWeek).to.equal(FirstStaffWeeklyExpenditure.mul(2))
+      expect(staffPendingExpenditureSecondWeek).to.equal(StaffWeeklyExpenditure.mul(2))
+
+    
 
     });
 
@@ -560,6 +563,7 @@ describe("EwolCampaign", function () {
       const stablecoinBalanceOfCampaingBefore = await stablecoinInstance.balanceOf(campaignAddress);
 
       const ewolerWithdrawTx = await campaignInstance.withdrawEwolerExpenditure(0);
+      await ewolerWithdrawTx.wait();
 
       const ewolerTotalWithdrawalAfter = await campaignInstance.ewolerWithdrawals(0);
       const totalExpendituresWithdrawnAfter = await campaignInstance.totalExpendituresWithdrawn()
@@ -597,6 +601,7 @@ describe("EwolCampaign", function () {
       const stablecoinBalanceOfCampaingBefore = await stablecoinInstance.balanceOf(campaignAddress);
 
       const stafferWithdrawTx = await campaignInstance.withdrawStaffExpenditure(0);
+      await stafferWithdrawTx.wait();
 
       const stafferTotalWithdrawalAfter = await campaignInstance.stafferWithdrawals(0);
       const totalExpendituresWithdrawnAfter = await campaignInstance.totalExpendituresWithdrawn()
