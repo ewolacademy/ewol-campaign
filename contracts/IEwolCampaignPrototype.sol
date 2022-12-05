@@ -11,6 +11,7 @@ interface IEwolCampaignPrototype {
   /// @param _campaignName        Name of the Ewol Campaign
   /// @param _targetEwolers       Target quantity of Ewolers to raise funding for
   /// @param _investmentPerEwoler Amount of currency to be raised per Ewoler
+  /// @param _costForEwoler       Amount of currency to be paid by the Ewoler for receiving Bootcamp
   /// @param _currencyToken       Address of the ERC20 token used as campaign currency
   /// @param _weeksOfBootcamp     Number of weeks of the bootcamp
   /// @param _premintAmount       Amount of campaign tokens preminted for the campaign launcher
@@ -19,6 +20,7 @@ interface IEwolCampaignPrototype {
     string calldata _campaignName,
     uint16 _targetEwolers,
     uint256 _investmentPerEwoler,
+    uint256 _costForEwoler,
     address _currencyToken,
     uint8 _weeksOfBootcamp,
     uint256 _premintAmount,
@@ -117,6 +119,14 @@ interface IEwolCampaignPrototype {
     uint256 _ewolerId,
     uint256 _amount
   ) external;
+
+  /// @notice Amount of repayment available for withdrawal 
+  /// @dev Amount available is proportional to campaign tokens holding less any withdrawn amounts
+  /// @param _claimer Address of the campaign token holder withdrawing a repayment
+  /// @return Amount available
+  function releasableRepayment (
+    address _claimer
+  ) external view returns (uint256);
 
   /// @notice Withdraw repayment amount
   /// @dev Amount to withdraw is proportional to campaign tokens holding

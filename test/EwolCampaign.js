@@ -117,6 +117,7 @@ describe("EwolCampaign", function () {
       const campaignName = "EWOL Cohorte 1";
       const targetEwolers = 25;
       const investmentPerEwoler = hre.ethers.utils.parseUnits("2000.0", 18);
+      const costForEwoler = hre.ethers.utils.parseUnits("2700.0", 18);
       const weeksOfBootcamp = 10;
       const premintAmount = hre.ethers.utils.parseUnits("5000.0", 18);
 
@@ -124,6 +125,7 @@ describe("EwolCampaign", function () {
         campaignName,
         targetEwolers,
         investmentPerEwoler,
+        costForEwoler,
         stablecoinAddress,
         weeksOfBootcamp,
         premintAmount
@@ -156,6 +158,10 @@ describe("EwolCampaign", function () {
         .to.equal(
           investmentPerEwoler
         );
+      expect(await campaignInstance.costForEwoler())
+        .to.equal(
+          costForEwoler
+        );
       expect(await campaignInstance.currencyToken())
         .to.equal(
           stablecoinAddress
@@ -187,6 +193,7 @@ describe("EwolCampaign", function () {
       );
       const failedLaunchTxNonOwner = registryInstanceForNonOwner.launchCampaign(
         "",
+        0,
         0,
         0,
         stablecoinAddress,
