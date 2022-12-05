@@ -1,11 +1,9 @@
-const {
-  expect
-} = require("chai");
+const { expect } = require("chai");
 const hre = require("hardhat");
 const helpers = require("@nomicfoundation/hardhat-network-helpers");
 const {
   weeks,
-  days
+  days,
 } = require("@nomicfoundation/hardhat-network-helpers/dist/src/helpers/time/duration");
 
 const registryContractName = "EwolCampaignRegistry";
@@ -30,13 +28,14 @@ const signerRoles = [
   "staff",
   "investor",
   "secondInvestor",
-  "thirdInvestor"
+  "thirdInvestor",
+  "stranger",
 ];
 
 const PERIODS = Object.freeze({
   INVESTMENT: 0,
   BOOTCAMP: 1,
-  REPAYMENT: 2
+  REPAYMENT: 2,
 });
 
 describe("EwolCampaign", function () {
@@ -61,12 +60,10 @@ describe("EwolCampaign", function () {
       stablecoinAddress = stablecoinInstance.address;
 
       const stablecoinSupply = await stablecoinInstance.totalSupply();
-      expect(stablecoinSupply)
-        .to.equal(0);
+      expect(stablecoinSupply).to.equal(0);
 
       const stablecoinOwner = await stablecoinInstance.owner();
-      expect(stablecoinOwner)
-        .to.equal(sigAddrs.deployer);
+      expect(stablecoinOwner).to.equal(sigAddrs.deployer);
     });
 
     it("Should mint stablecoins for each role", async function () {
@@ -100,17 +97,14 @@ describe("EwolCampaign", function () {
 
       console.log("Initial prototype contract deployed to:", prototypeAddress);
 
-      expect(prototypeAddress)
-        .to.be.a.properAddress;
-      expect(prototypeAddress)
-        .to.not.equal(hre.ethers.constants.AddressZero);
+      expect(prototypeAddress).to.be.a.properAddress;
+      expect(prototypeAddress).to.not.equal(hre.ethers.constants.AddressZero);
     });
 
     it("Should assign the Registry owner role to the contract deployer", async function () {
       const registryOwnerAddr = await registryInstance.owner();
 
-      expect(registryOwnerAddr)
-        .to.equal(sigAddrs.deployer);
+      expect(registryOwnerAddr).to.equal(sigAddrs.deployer);
     });
 
     it("Should enable the owner to launch a new campaign", async function () {
@@ -137,12 +131,9 @@ describe("EwolCampaign", function () {
       );
       [campaignId, campaignAddress] = campaignLaunchedEvent.args;
 
-      expect(campaignId)
-        .to.equal(0);
-      expect(campaignAddress)
-        .to.be.a.properAddress;
-      expect(campaignAddress)
-        .to.not.equal(hre.ethers.constants.AddressZero);
+      expect(campaignId).to.equal(0);
+      expect(campaignAddress).to.be.a.properAddress;
+      expect(campaignAddress).to.not.equal(hre.ethers.constants.AddressZero);
 
       const campaignFactory = await hre.ethers.getContractFactory(
         "EwolCampaignPrototype",
@@ -150,41 +141,29 @@ describe("EwolCampaign", function () {
       );
       campaignInstance = campaignFactory.attach(campaignAddress);
 
-      expect(await campaignInstance.name())
-        .to.equal(campaignName);
-      expect(await campaignInstance.targetEwolers())
-        .to.equal(targetEwolers);
-      expect(await campaignInstance.investmentPerEwoler())
-        .to.equal(
-          investmentPerEwoler
-        );
-      expect(await campaignInstance.costForEwoler())
-        .to.equal(
-          costForEwoler
-        );
-      expect(await campaignInstance.currencyToken())
-        .to.equal(
-          stablecoinAddress
-        );
-      expect(await campaignInstance.weeksOfBootcamp())
-        .to.equal(
-          weeksOfBootcamp
-        );
+      expect(await campaignInstance.name()).to.equal(campaignName);
+      expect(await campaignInstance.targetEwolers()).to.equal(targetEwolers);
+      expect(await campaignInstance.investmentPerEwoler()).to.equal(
+        investmentPerEwoler
+      );
+      expect(await campaignInstance.costForEwoler()).to.equal(costForEwoler);
+      expect(await campaignInstance.currencyToken()).to.equal(
+        stablecoinAddress
+      );
+      expect(await campaignInstance.weeksOfBootcamp()).to.equal(
+        weeksOfBootcamp
+      );
 
-      expect(await campaignInstance.totalSupply())
-        .to.equal(premintAmount);
-      expect(await campaignInstance.balanceOf(sigAddrs.deployer))
-        .to.equal(
-          premintAmount
-        );
+      expect(await campaignInstance.totalSupply()).to.equal(premintAmount);
+      expect(await campaignInstance.balanceOf(sigAddrs.deployer)).to.equal(
+        premintAmount
+      );
 
-      expect(await campaignInstance.owner())
-        .to.equal(sigAddrs.deployer);
+      expect(await campaignInstance.owner()).to.equal(sigAddrs.deployer);
 
-      expect(await campaignInstance.investmentCap())
-        .to.equal(
-          investmentPerEwoler.mul(targetEwolers)
-        );
+      expect(await campaignInstance.investmentCap()).to.equal(
+        investmentPerEwoler.mul(targetEwolers)
+      );
     });
 
     it("Should prevent a non owner from launching a new campaign", async function () {
@@ -201,17 +180,16 @@ describe("EwolCampaign", function () {
         0
       );
 
-      expect(failedLaunchTxNonOwner)
-        .to.be.revertedWith(
-          "Ownable: caller is not the owner"
-        );
+      expect(failedLaunchTxNonOwner).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
     });
   });
 
   describe("EwolCampaignPrototype", function () {
     it("Should allow the owner to enroll an ewoler", async function () {
-
-      const totalWeeklyExpenditureBefore = await campaignInstance.totalWeeklyExpenditure();
+      const totalWeeklyExpenditureBefore =
+        await campaignInstance.totalWeeklyExpenditure();
 
       const createEwolerTx = await campaignInstance.enrollEwoler(
         0,
@@ -220,14 +198,16 @@ describe("EwolCampaign", function () {
       );
       createEwolerTx.wait();
 
-      const totalWeeklyExpenditureAfter = await campaignInstance.totalWeeklyExpenditure();
+      const totalWeeklyExpenditureAfter =
+        await campaignInstance.totalWeeklyExpenditure();
 
-      expect(await campaignInstance.ewolerAddress(0))
-        .to.equal(sigAddrs.ewoler);
-      expect(await campaignInstance.ewolerWeeklyExpenditure(0))
-        .to.equal(hre.ethers.utils.parseUnits("750.0", 18));
-      expect(totalWeeklyExpenditureAfter.sub(totalWeeklyExpenditureBefore))
-        .to.equal(hre.ethers.utils.parseUnits("750.0", 18));
+      expect(await campaignInstance.ewolerAddress(0)).to.equal(sigAddrs.ewoler);
+      expect(await campaignInstance.ewolerWeeklyExpenditure(0)).to.equal(
+        hre.ethers.utils.parseUnits("750.0", 18)
+      );
+      expect(
+        totalWeeklyExpenditureAfter.sub(totalWeeklyExpenditureBefore)
+      ).to.equal(hre.ethers.utils.parseUnits("750.0", 18));
     });
 
     it("Should prevent a non owner from create a new ewoler", async function () {
@@ -239,10 +219,9 @@ describe("EwolCampaign", function () {
         sigAddrs.ewoler,
         hre.ethers.utils.parseUnits("75.0", 18)
       );
-      expect(failedEnrollTxNonOwner)
-        .to.be.revertedWith(
-          "Ownable: caller is not the owner"
-        );
+      expect(failedEnrollTxNonOwner).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
     });
 
     it("Should prevent to enroll an ewoler that already exist", async function () {
@@ -252,13 +231,12 @@ describe("EwolCampaign", function () {
         hre.ethers.utils.parseUnits("74.0", 18)
       );
 
-      expect(createEwolerTx)
-        .to.be.revertedWith("Ewoler already enrolled");
+      expect(createEwolerTx).to.be.revertedWith("Ewoler already enrolled");
     });
 
     it("Should allow to enroll a staff-member", async function () {
-
-      const totalWeeklyExpenditureBefore = await campaignInstance.totalWeeklyExpenditure();
+      const totalWeeklyExpenditureBefore =
+        await campaignInstance.totalWeeklyExpenditure();
 
       const enrollStaffTx = await campaignInstance.enrollStaff(
         0,
@@ -268,18 +246,20 @@ describe("EwolCampaign", function () {
       );
       enrollStaffTx.wait();
 
-      const totalWeeklyExpenditureAfter = await campaignInstance.totalWeeklyExpenditure();
+      const totalWeeklyExpenditureAfter =
+        await campaignInstance.totalWeeklyExpenditure();
 
-      expect(await campaignInstance.stafferAddress(0))
-        .to.equal(sigAddrs.staff);
-      expect(await campaignInstance.stafferWeeklyExpenditure(0))
-        .to.equal(hre.ethers.utils.parseUnits("750.0", 18));
-      expect(totalWeeklyExpenditureAfter.sub(totalWeeklyExpenditureBefore))
-        .to.equal(hre.ethers.utils.parseUnits("750.0", 18));
+      expect(await campaignInstance.stafferAddress(0)).to.equal(sigAddrs.staff);
+      expect(await campaignInstance.stafferWeeklyExpenditure(0)).to.equal(
+        hre.ethers.utils.parseUnits("750.0", 18)
+      );
+      expect(
+        totalWeeklyExpenditureAfter.sub(totalWeeklyExpenditureBefore)
+      ).to.equal(hre.ethers.utils.parseUnits("750.0", 18));
 
-      expect(await campaignInstance.balanceOf(sigAddrs.staff))
-        .to.equal(hre.ethers.utils.parseUnits("500.0", 18));
-
+      expect(await campaignInstance.balanceOf(sigAddrs.staff)).to.equal(
+        hre.ethers.utils.parseUnits("500.0", 18)
+      );
     });
 
     it("Should prevent a non owner from create a new staff-member", async function () {
@@ -293,10 +273,9 @@ describe("EwolCampaign", function () {
           hre.ethers.utils.parseUnits("75.0", 18),
           hre.ethers.utils.parseUnits("50.0", 18)
         );
-      expect(failedEnrollStaffTxNonOwner)
-        .to.be.revertedWith(
-          "Ownable: caller is not the owner"
-        );
+      expect(failedEnrollStaffTxNonOwner).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
     });
 
     it("Should prevent to enroll a staff-member that already exist", async function () {
@@ -307,14 +286,14 @@ describe("EwolCampaign", function () {
         hre.ethers.utils.parseUnits("51.0", 18)
       );
 
-      expect(enrollStaffTx)
-        .to.be.revertedWith("Ewoler already enrolled");
+      expect(enrollStaffTx).to.be.revertedWith("Ewoler already enrolled");
       expect();
     });
 
     it("Should allow to deposit investment", async function () {
-
-      stablecoinBalanceForInvestorBefore = await stablecoinInstance.balanceOf(sigAddrs.investor);
+      stablecoinBalanceForInvestorBefore = await stablecoinInstance.balanceOf(
+        sigAddrs.investor
+      );
 
       const firstInvestorInstance = await campaignInstance.connect(
         sigInstances.investor
@@ -333,34 +312,37 @@ describe("EwolCampaign", function () {
       );
       await investmentTx.wait();
 
-      stablecoinBalanceForInvestorAfter = await stablecoinInstance.balanceOf(sigAddrs.investor);
+      stablecoinBalanceForInvestorAfter = await stablecoinInstance.balanceOf(
+        sigAddrs.investor
+      );
 
-      expect(stablecoinBalanceForInvestorAfter.sub(stablecoinBalanceForInvestorBefore))
-        .to.equal(
-          hre.ethers.utils.parseUnits("-2000.0", 18)
-        );
-      expect(await campaignInstance.balanceOf(sigAddrs.investor))
-        .to.equal(
-          hre.ethers.utils.parseUnits("2000.0", 18)
-        );
-      expect(await campaignInstance.totalInvested())
-        .to.equal(
-          hre.ethers.utils.parseUnits("2000.0", 18)
-        );
+      expect(
+        stablecoinBalanceForInvestorAfter.sub(
+          stablecoinBalanceForInvestorBefore
+        )
+      ).to.equal(hre.ethers.utils.parseUnits("-2000.0", 18));
+      expect(await campaignInstance.balanceOf(sigAddrs.investor)).to.equal(
+        hre.ethers.utils.parseUnits("2000.0", 18)
+      );
+      expect(await campaignInstance.totalInvested()).to.equal(
+        hre.ethers.utils.parseUnits("2000.0", 18)
+      );
     });
 
     it("Should prevent the deposit of more than investCap", async function () {
       const totalInvestedBefore = await campaignInstance.totalInvested();
       const investmentCap = await campaignInstance.investmentCap();
 
-      const investmentToOverflow = investmentCap.sub(totalInvestedBefore)
+      const investmentToOverflow = investmentCap
+        .sub(totalInvestedBefore)
         .add(1);
 
       const secondInvestorInstance = await campaignInstance.connect(
         sigInstances.secondInvestor
       );
-      const secondInvestorStablecoinInstance =
-        await stablecoinInstance.connect(sigInstances.secondInvestor);
+      const secondInvestorStablecoinInstance = await stablecoinInstance.connect(
+        sigInstances.secondInvestor
+      );
       const approveToSpend = await secondInvestorStablecoinInstance.approve(
         campaignAddress,
         investmentToOverflow
@@ -371,10 +353,9 @@ describe("EwolCampaign", function () {
         stablecoinAddress,
         investmentToOverflow
       );
-      expect(failedInvestmentTx)
-        .to.be.revertedWith(
-          "Deposit exceeds investment cap"
-        );
+      expect(failedInvestmentTx).to.be.revertedWith(
+        "Deposit exceeds investment cap"
+      );
     });
 
     it("Should prevent the deposit of an unupported token", async function () {
@@ -397,30 +378,35 @@ describe("EwolCampaign", function () {
       const secondInvestorCampaignInstance = await campaignInstance.connect(
         sigInstances.secondInvestor
       );
-      const failedInvestmentTx = secondInvestorCampaignInstance.depositInvestment(
-        secondStablecoinAddress,
-        hre.ethers.utils.parseUnits("200.0", 18)
+      const failedInvestmentTx =
+        secondInvestorCampaignInstance.depositInvestment(
+          secondStablecoinAddress,
+          hre.ethers.utils.parseUnits("200.0", 18)
+        );
+      expect(failedInvestmentTx).to.be.revertedWith(
+        "Deposit token not supported"
       );
-      expect(failedInvestmentTx)
-        .to.be.revertedWith("Deposit token not supported");
     });
 
     it("Should prevent the inquiry of Pending Expenditure for Ewoler/Staff before transition to Bootcamp period", async function () {
+      const failedEwolerPendingExpenditureTx =
+        campaignInstance.pendingEwolerExpenditure(0);
+      expect(failedEwolerPendingExpenditureTx).to.be.revertedWith(
+        "Bootcamp hasn't started"
+      );
 
-      const failedEwolerPendingExpenditureTx = campaignInstance.pendingEwolerExpenditure(0);
-      expect(failedEwolerPendingExpenditureTx)
-        .to.be.revertedWith("Bootcamp hasn't started");
-
-      const failedStafferPendingExpenditureTx = campaignInstance.pendingEwolerExpenditure(0);
-      expect(failedStafferPendingExpenditureTx)
-        .to.be.revertedWith("Bootcamp hasn't started");
-    })
+      const failedStafferPendingExpenditureTx =
+        campaignInstance.pendingEwolerExpenditure(0);
+      expect(failedStafferPendingExpenditureTx).to.be.revertedWith(
+        "Bootcamp hasn't started"
+      );
+    });
 
     it("Should prevent the transition to Bootcamp period if weekly expenditure can't be sustained", async function () {
-
       const totalInvestedBefore = await campaignInstance.totalInvested();
 
-      const totalWeeklyExpenditure = await campaignInstance.totalWeeklyExpenditure();
+      const totalWeeklyExpenditure =
+        await campaignInstance.totalWeeklyExpenditure();
       const weeksOfBootcamp = await campaignInstance.weeksOfBootcamp();
 
       const totalToSpend = totalWeeklyExpenditure.mul(weeksOfBootcamp);
@@ -444,17 +430,19 @@ describe("EwolCampaign", function () {
       );
       await investmentTx.wait();
 
-      expect(await campaignInstance.totalInvested())
-        .to.equal(totalToSpend.sub(1));
+      expect(await campaignInstance.totalInvested()).to.equal(
+        totalToSpend.sub(1)
+      );
 
       const failedStartBootcampTx = campaignInstance.startBootcamp();
-      expect(failedStartBootcampTx)
-        .to.be.revertedWith("Not enough funds to start Bootcamp");
+      expect(failedStartBootcampTx).to.be.revertedWith(
+        "Not enough funds to start Bootcamp"
+      );
     });
 
     it("Should allow the transition to Bootcamp period if weekly expenditure can be sustained", async function () {
-
-      const totalWeeklyExpenditure = await campaignInstance.totalWeeklyExpenditure();
+      const totalWeeklyExpenditure =
+        await campaignInstance.totalWeeklyExpenditure();
       const weeksOfBootcamp = await campaignInstance.weeksOfBootcamp();
 
       const totalToSpend = totalWeeklyExpenditure.mul(weeksOfBootcamp);
@@ -476,14 +464,12 @@ describe("EwolCampaign", function () {
       );
       await investmentTx.wait();
 
-      expect(await campaignInstance.totalInvested())
-        .to.equal(totalToSpend);
+      expect(await campaignInstance.totalInvested()).to.equal(totalToSpend);
 
       const startBootcampTx = await campaignInstance.startBootcamp();
       await startBootcampTx.wait();
 
-      expect(await campaignInstance.currentPeriod())
-        .to.equal(PERIODS.BOOTCAMP);
+      expect(await campaignInstance.currentPeriod()).to.equal(PERIODS.BOOTCAMP);
     });
 
     it("Should prevent investment deposit after the Investment period ", async function () {
@@ -502,160 +488,339 @@ describe("EwolCampaign", function () {
         stablecoinAddress,
         hre.ethers.utils.parseUnits("2000.0", 18)
       );
-      expect(failedInvestmentTx)
-        .to.be.revertedWith(
-          "Method not available for this period"
-        );
+      expect(failedInvestmentTx).to.be.revertedWith(
+        "Method not available for this period"
+      );
     });
 
     it("Should return 0 Pending Expenditure for Ewoler/Staff if bootcamp time < 1 week", async function () {
-
       await helpers.time.increase(days(2)); // Increase time 2 days
 
-      const ewolerPendingExpenditure = await campaignInstance.pendingEwolerExpenditure(0);
-      expect(ewolerPendingExpenditure)
-        .to.equal(0)
+      const ewolerPendingExpenditure =
+        await campaignInstance.pendingEwolerExpenditure(0);
+      expect(ewolerPendingExpenditure).to.equal(0);
 
-      const staffPendingExpenditure = await campaignInstance.pendingEwolerExpenditure(0);
-      expect(staffPendingExpenditure)
-        .to.equal(0)
-
-    })
+      const staffPendingExpenditure =
+        await campaignInstance.pendingEwolerExpenditure(0);
+      expect(staffPendingExpenditure).to.equal(0);
+    });
 
     it("Should return Ewoler & Staff pending Expenditure when elapsed time > 1 week", async function () {
-
-      const FirstEwolerWeeklyExpenditure = await campaignInstance.ewolerWeeklyExpenditure(0)
-      const FirstStaffWeeklyExpenditure = await campaignInstance.stafferWeeklyExpenditure(0)
+      const FirstEwolerWeeklyExpenditure =
+        await campaignInstance.ewolerWeeklyExpenditure(0);
+      const FirstStaffWeeklyExpenditure =
+        await campaignInstance.stafferWeeklyExpenditure(0);
 
       //Ewoler - Staffer Pending Expenditure after 1 week
       await helpers.time.increase(days(7)); // Increase time 7 days
-      const ewolerPendingExpenditureFirstWeek = await campaignInstance.pendingEwolerExpenditure(0);
-      expect(ewolerPendingExpenditureFirstWeek)
-        .to.equal(FirstEwolerWeeklyExpenditure)
+      const ewolerPendingExpenditureFirstWeek =
+        await campaignInstance.pendingEwolerExpenditure(0);
+      expect(ewolerPendingExpenditureFirstWeek).to.equal(
+        FirstEwolerWeeklyExpenditure
+      );
 
-      const staffPendingExpenditureFirstWeek = await campaignInstance.pendingStafferExpenditure(0);
-      expect(staffPendingExpenditureFirstWeek)
-        .to.equal(FirstStaffWeeklyExpenditure)
+      const staffPendingExpenditureFirstWeek =
+        await campaignInstance.pendingStafferExpenditure(0);
+      expect(staffPendingExpenditureFirstWeek).to.equal(
+        FirstStaffWeeklyExpenditure
+      );
 
       //Ewoler - Staffer Pending Expenditure after 2 weeks
       await helpers.time.increase(days(7)); // Increase time another 7 days
-      const ewolerPendingExpenditureSecondWeek = await campaignInstance.pendingEwolerExpenditure(0);
-      expect(ewolerPendingExpenditureSecondWeek)
-        .to.equal(FirstEwolerWeeklyExpenditure.mul(2))
+      const ewolerPendingExpenditureSecondWeek =
+        await campaignInstance.pendingEwolerExpenditure(0);
+      expect(ewolerPendingExpenditureSecondWeek).to.equal(
+        FirstEwolerWeeklyExpenditure.mul(2)
+      );
 
-      const staffPendingExpenditureSecondWeek = await campaignInstance.pendingEwolerExpenditure(0);
-      expect(staffPendingExpenditureSecondWeek)
-        .to.equal(FirstStaffWeeklyExpenditure.mul(2))
-
+      const staffPendingExpenditureSecondWeek =
+        await campaignInstance.pendingEwolerExpenditure(0);
+      expect(staffPendingExpenditureSecondWeek).to.equal(
+        FirstStaffWeeklyExpenditure.mul(2)
+      );
     });
 
     it("Should withdraw Ewoler Pending Expenditure", async function () {
+      const totalExpendituresWithdrawnBefore =
+        await campaignInstance.totalExpendituresWithdrawn();
+      const ewolerTotalWithdrawalBefore =
+        await campaignInstance.ewolerWithdrawals(0);
+      const ewolerPendingExpenditure =
+        await campaignInstance.pendingEwolerExpenditure(0); // Amount to withdraw
+      const stablecoinBalanceOfEwolerBefore =
+        await stablecoinInstance.balanceOf(sigAddrs.ewoler);
+      const stablecoinBalanceOfCampaingBefore =
+        await stablecoinInstance.balanceOf(campaignAddress);
 
-      const totalExpendituresWithdrawnBefore = await campaignInstance.totalExpendituresWithdrawn()
-      const ewolerTotalWithdrawalBefore = await campaignInstance.ewolerWithdrawals(0);
-      const ewolerPendingExpenditure = await campaignInstance.pendingEwolerExpenditure(0); // Amount to withdraw
-      const stablecoinBalanceOfEwolerBefore = await stablecoinInstance.balanceOf(sigAddrs.ewoler);
-      const stablecoinBalanceOfCampaingBefore = await stablecoinInstance.balanceOf(campaignAddress);
-
-      const ewolerWithdrawTx = await campaignInstance.withdrawEwolerExpenditure(0);
+      const ewolerWithdrawTx = await campaignInstance.withdrawEwolerExpenditure(
+        0
+      );
       await ewolerWithdrawTx.wait();
 
-      const ewolerTotalWithdrawalAfter = await campaignInstance.ewolerWithdrawals(0);
-      const totalExpendituresWithdrawnAfter = await campaignInstance.totalExpendituresWithdrawn()
-      const stablecoinBalanceOfEwolerAfter = await stablecoinInstance.balanceOf(sigAddrs.ewoler);
-      const stablecoinBalanceOfCampaingAfter = await stablecoinInstance.balanceOf(campaignAddress);
+      const ewolerTotalWithdrawalAfter =
+        await campaignInstance.ewolerWithdrawals(0);
+      const totalExpendituresWithdrawnAfter =
+        await campaignInstance.totalExpendituresWithdrawn();
+      const stablecoinBalanceOfEwolerAfter = await stablecoinInstance.balanceOf(
+        sigAddrs.ewoler
+      );
+      const stablecoinBalanceOfCampaingAfter =
+        await stablecoinInstance.balanceOf(campaignAddress);
 
       // Pending witdrawal after the withdraw tx should be 0 again
-      const ewolerPendingExpenditureAfterWithdraw = await campaignInstance.pendingEwolerExpenditure(0);
-      expect(ewolerPendingExpenditureAfterWithdraw)
-        .to.equal(0);
+      const ewolerPendingExpenditureAfterWithdraw =
+        await campaignInstance.pendingEwolerExpenditure(0);
+      expect(ewolerPendingExpenditureAfterWithdraw).to.equal(0);
 
       //Mapping of ewolers whithdraw should sum the new withdraw amount
-      expect(ewolerTotalWithdrawalAfter.sub(ewolerTotalWithdrawalBefore))
-        .to.equal(ewolerPendingExpenditure)
+      expect(
+        ewolerTotalWithdrawalAfter.sub(ewolerTotalWithdrawalBefore)
+      ).to.equal(ewolerPendingExpenditure);
 
       //Mapping of total whithdraws (ewolers + staff) should sum the new withdraw amount
-      expect(totalExpendituresWithdrawnAfter.sub(totalExpendituresWithdrawnBefore))
-        .to.equal(ewolerPendingExpenditure)
+      expect(
+        totalExpendituresWithdrawnAfter.sub(totalExpendituresWithdrawnBefore)
+      ).to.equal(ewolerPendingExpenditure);
 
       // Ewoler Stablecoin balance should have increase the withdrawn amount
-      expect(stablecoinBalanceOfEwolerAfter.sub(stablecoinBalanceOfEwolerBefore))
-        .
-      to.equal(ewolerPendingExpenditure)
+      expect(
+        stablecoinBalanceOfEwolerAfter.sub(stablecoinBalanceOfEwolerBefore)
+      ).to.equal(ewolerPendingExpenditure);
 
       // Campaign Stablecoin balance should have decrease the withdrawn amount
-      expect(stablecoinBalanceOfCampaingBefore.sub(stablecoinBalanceOfCampaingAfter))
-        .
-      to.equal(ewolerPendingExpenditure)
-    })
+      expect(
+        stablecoinBalanceOfCampaingBefore.sub(stablecoinBalanceOfCampaingAfter)
+      ).to.equal(ewolerPendingExpenditure);
+    });
 
     it("Should withdraw Staff Pending Expenditure", async function () {
-      const stablecoinBalanceOfStafferBefore = await stablecoinInstance.balanceOf(sigAddrs.staff);
-      const totalExpendituresWithdrawnBefore = await campaignInstance.totalExpendituresWithdrawn()
-      const stafferTotalWithdrawalBefore = await campaignInstance.stafferWithdrawals(0);
-      const stafferPendingExpenditure = await campaignInstance.pendingStafferExpenditure(0); // Amount to whithdraw
-      const stablecoinBalanceOfCampaingBefore = await stablecoinInstance.balanceOf(campaignAddress);
+      const stablecoinBalanceOfStafferBefore =
+        await stablecoinInstance.balanceOf(sigAddrs.staff);
+      const totalExpendituresWithdrawnBefore =
+        await campaignInstance.totalExpendituresWithdrawn();
+      const stafferTotalWithdrawalBefore =
+        await campaignInstance.stafferWithdrawals(0);
+      const stafferPendingExpenditure =
+        await campaignInstance.pendingStafferExpenditure(0); // Amount to whithdraw
+      const stablecoinBalanceOfCampaingBefore =
+        await stablecoinInstance.balanceOf(campaignAddress);
 
-      const stafferWithdrawTx = await campaignInstance.withdrawStaffExpenditure(0);
+      const stafferWithdrawTx = await campaignInstance.withdrawStaffExpenditure(
+        0
+      );
       await stafferWithdrawTx.wait();
 
-      const stafferTotalWithdrawalAfter = await campaignInstance.stafferWithdrawals(0);
-      const totalExpendituresWithdrawnAfter = await campaignInstance.totalExpendituresWithdrawn()
-      const stablecoinBalanceOfStafferAfter = await stablecoinInstance.balanceOf(sigAddrs.staff);
-      const stablecoinBalanceOfCampaingAfter = await stablecoinInstance.balanceOf(campaignAddress);
+      const stafferTotalWithdrawalAfter =
+        await campaignInstance.stafferWithdrawals(0);
+      const totalExpendituresWithdrawnAfter =
+        await campaignInstance.totalExpendituresWithdrawn();
+      const stablecoinBalanceOfStafferAfter =
+        await stablecoinInstance.balanceOf(sigAddrs.staff);
+      const stablecoinBalanceOfCampaingAfter =
+        await stablecoinInstance.balanceOf(campaignAddress);
 
       // Pending witdrawal after the withdraw tx should be 0 again
-      const stafferPendingExpenditureAfterWithdraw = await campaignInstance.pendingStafferExpenditure(0);
-      expect(stafferPendingExpenditureAfterWithdraw)
-        .to.equal(0);
+      const stafferPendingExpenditureAfterWithdraw =
+        await campaignInstance.pendingStafferExpenditure(0);
+      expect(stafferPendingExpenditureAfterWithdraw).to.equal(0);
 
       //Mapping of staffer whithdraw should sum the new withdraw amount
-      expect(stafferTotalWithdrawalAfter.sub(stafferTotalWithdrawalBefore))
-        .to.equal(stafferPendingExpenditure)
+      expect(
+        stafferTotalWithdrawalAfter.sub(stafferTotalWithdrawalBefore)
+      ).to.equal(stafferPendingExpenditure);
 
       //Mapping of total whithdraws (ewolers + staff) should sum the new withdraw amount
-      expect(totalExpendituresWithdrawnAfter.sub(totalExpendituresWithdrawnBefore))
-        .to.equal(stafferPendingExpenditure)
+      expect(
+        totalExpendituresWithdrawnAfter.sub(totalExpendituresWithdrawnBefore)
+      ).to.equal(stafferPendingExpenditure);
 
       // Staffer Stablecoin balance should have increase the withdrawn amount
-      expect(stablecoinBalanceOfStafferAfter.sub(stablecoinBalanceOfStafferBefore))
-        .
-      to.equal(stafferPendingExpenditure)
+      expect(
+        stablecoinBalanceOfStafferAfter.sub(stablecoinBalanceOfStafferBefore)
+      ).to.equal(stafferPendingExpenditure);
 
       // Campaign Stablecoin balance should have decrease the withdrawn amount
-      expect(stablecoinBalanceOfCampaingBefore.sub(stablecoinBalanceOfCampaingAfter))
-        .
-      to.equal(stafferPendingExpenditure)
-    })
+      expect(
+        stablecoinBalanceOfCampaingBefore.sub(stablecoinBalanceOfCampaingAfter)
+      ).to.equal(stafferPendingExpenditure);
+    });
 
     it("Should not allow to Finish Bootcamp if Weeks Elapsed < WeeksOfBootcamp", async function () {
-
       const failedFinishBootcampTx = campaignInstance.finishBootcamp();
-      expect(failedFinishBootcampTx)
-        .to.be.revertedWith("Bootcamp hasn't been completed");
+      expect(failedFinishBootcampTx).to.be.revertedWith(
+        "Bootcamp hasn't been completed"
+      );
     });
 
     it("Should not allow a Non Owner to Finish Bootcamp", async function () {
-
       const campaignInstanceForNonOwner = campaignInstance.connect(
-        sigInstances.nonOwner);
+        sigInstances.nonOwner
+      );
 
       const failedFinishBootcampTxNonOwner = campaignInstance.finishBootcamp();
-      expect(failedFinishBootcampTxNonOwner)
-        .to.be.revertedWith(
-          "Ownable: caller is not the owner"
-        );
+      expect(failedFinishBootcampTxNonOwner).to.be.revertedWith(
+        "Ownable: caller is not the owner"
+      );
+    });
+    it("Should not allow a staffer to transfer token before repayment period", async function () {
+      const campaignInstanceForStaffr = campaignInstance.connect(
+        sigInstances.staff
+      );
+
+      const staffTx = campaignInstanceForStaffr.transfer(
+        sigAddrs.stranger,
+        100000
+      );
+      await expect(staffTx).to.be.revertedWith(
+        "unable to transfer until repayment period"
+      );
+    });
+    it("Should allow a investor to transfer token before repayment period", async function () {
+      const campaignInstanceForInvestor = campaignInstance.connect(
+        sigInstances.investor
+      );
+      const balanceInvestorBeforTx = await campaignInstance.balanceOf(
+        sigAddrs.investor
+      );
+      let value = balanceInvestorBeforTx.div(2);
+      const investorTx = await campaignInstanceForInvestor.transfer(
+        sigAddrs.stranger,
+        value
+      );
+      investorTx.wait();
+      const balanceInvestorAfterTx = await campaignInstance.balanceOf(
+        sigAddrs.investor
+      );
+      expect(balanceInvestorAfterTx).to.equal(
+        balanceInvestorBeforTx.sub(value)
+      );
     });
 
     it("Should Finish Bootcamp & Change Period Time to 'REPAYMENT'", async function () {
-
       await helpers.time.increase(weeks(9)); // Increase time another 9 weeks (2 had passed before)
       const FinishBootcampTx = await campaignInstance.finishBootcamp();
 
-      expect(await campaignInstance.currentPeriod())
-        .to.equal(PERIODS.REPAYMENT);
+      expect(await campaignInstance.currentPeriod()).to.equal(
+        PERIODS.REPAYMENT
+      );
+    });
+  });
+  describe("Ewol Campaign Repayment", function () {
+    it("Should allow a staffer to transfer tokens on repayment period", async function () {
+      const campaignInstanceForStaffr = campaignInstance.connect(
+        sigInstances.staff
+      );
+      const staffBalanceBeforeTx = await campaignInstance.balanceOf(
+        sigAddrs.staff
+      );
+      const value = staffBalanceBeforeTx.div(2);
 
+      const staffTx = await campaignInstanceForStaffr.transfer(
+        sigAddrs.stranger,
+        value
+      );
+
+      staffTx.wait();
+
+      const staffBalanceAfterTx = await campaignInstance.balanceOf(
+        sigAddrs.staff
+      );
+
+      expect(staffBalanceAfterTx).to.equal(staffBalanceBeforeTx.sub(value));
     });
 
+    it("Should calculates the correct amount of debt for an ewoler", async function () {
+      const ewolerDebt = await campaignInstance.ewolerDebt(0);
+      const total = (await campaignInstance.costForEwoler())
+        .add(await campaignInstance.ewolerWithdrawals(0))
+        .sub(await campaignInstance.ewolerRepayments(0));
+      expect(ewolerDebt).to.equal(total);
+    });
+    it("Should correct debt if ewoler pays", async function () {
+      const ewolerInstanceforStablecoin = await stablecoinInstance.connect(
+        sigInstances.ewoler
+      );
+      const ewolerInitalDebt = await campaignInstance.ewolerDebt(0);
+      const paymentApprove = await ewolerInstanceforStablecoin.approve(
+        campaignAddress,
+        ewolerInitalDebt.div(2)
+      );
+      await paymentApprove.wait();
+      // console.log(await stablecoinInstance.balanceOf(sigAddrs.ewoler));
+      const ewolerInstance = await campaignInstance.connect(
+        sigInstances.ewoler
+      );
+      const ewolerPayment = await ewolerInstance.repayDebt(
+        0,
+        ewolerInitalDebt.div(2)
+      );
+      await ewolerPayment.wait();
+      const ewolerFinalDebt = await campaignInstance.ewolerDebt(0);
+      expect(ewolerInitalDebt).to.equal(ewolerFinalDebt.mul(2));
+    });
+    it("Should prevent ewoler to pay more than he owes", async function () {
+      const ewolerInstanceforStablecoin = await stablecoinInstance.connect(
+        sigInstances.ewoler
+      );
+      const ewolerInitalDebt = await campaignInstance.ewolerDebt(0);
+      const paymentApprove = await ewolerInstanceforStablecoin.approve(
+        campaignAddress,
+        ewolerInitalDebt
+      );
+      await paymentApprove.wait();
+      // console.log(await stablecoinInstance.balanceOf(sigAddrs.ewoler));
+      const ewolerInstance = await campaignInstance.connect(
+        sigInstances.ewoler
+      );
+      const ewolerPayment = ewolerInstance.repayDebt(0, ewolerInitalDebt + 1);
+      await expect(ewolerPayment).to.be.revertedWith("Paying more than owed");
+    });
+    it("Should allow to withdraw repayments", async function () {
+      const investorReleasable = await campaignInstance.releasableRepayment(
+        sigAddrs.investor
+      );
+      const balanceStablecoinContractBefore =
+        await stablecoinInstance.balanceOf(campaignAddress);
+      const balanceStablecoinInvestorBefore =
+        await stablecoinInstance.balanceOf(sigAddrs.investor);
+      const totalRepaymentsWithdrawnBefore =
+        await campaignInstance.totalRepaymentsWithdrawn();
+      const repaymentsWithdrawnBefore =
+        await campaignInstance.repaymentsWithdrawn(sigAddrs.investor);
+      const investorWithdrawal = await campaignInstance.withdrawRepayment(
+        sigAddrs.investor
+      );
+      await investorWithdrawal.wait();
+      const balanceStablecoinContractAfter = await stablecoinInstance.balanceOf(
+        campaignAddress
+      );
+      const balanceStablecoinInvestorAfter = await stablecoinInstance.balanceOf(
+        sigAddrs.investor
+      );
+      const totalRepaymentsWithdrawnAfter =
+        await campaignInstance.totalRepaymentsWithdrawn();
+      const repaymentsWithdrawnAfter =
+        await campaignInstance.repaymentsWithdrawn(sigAddrs.investor);
+      expect(balanceStablecoinContractBefore).to.equal(
+        balanceStablecoinContractAfter.add(investorReleasable)
+      );
+      expect(balanceStablecoinInvestorBefore).to.equal(
+        balanceStablecoinInvestorAfter.sub(investorReleasable)
+      );
+      expect(totalRepaymentsWithdrawnAfter).to.equal(
+        totalRepaymentsWithdrawnBefore.add(investorReleasable)
+      );
+      expect(repaymentsWithdrawnAfter).to.equal(
+        repaymentsWithdrawnBefore.add(investorReleasable)
+      );
+    });
+    it("Should prevent to withdraw if repaymets are in zero ", async function () {
+      const investorWithdrawal = campaignInstance.withdrawRepayment(
+        sigAddrs.investor
+      );
+      await expect(investorWithdrawal).to.be.revertedWith(
+        "Claimer is not due payment"
+      );
+    });
   });
 });

@@ -49,6 +49,9 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   /// @notice Wallet address for each staff member
   mapping (uint256 => address) public stafferAddress;
 
+  /// @notice Address belong to a staff
+  mapping (address => bool) public stafferExist;
+
   /// @notice Total amount to be released per week of Bootcamp for each staff member
   mapping (uint256 => uint256) public stafferWeeklyExpenditure;
 
@@ -168,6 +171,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     require(stafferAddress[_stafferId] == address(0), "Staffer already enrolled");
     stafferAddress[_stafferId] = _stafferAddress;
     stafferWeeklyExpenditure[_stafferId] = _weeklyExpenditure;
+    stafferExist[_stafferAddress]= true;
     _mint(_stafferAddress, _variableComp);
     totalWeeklyExpenditure += _weeklyExpenditure;
   }
@@ -201,7 +205,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     uint256 _weeklyExpenditure = stafferWeeklyExpenditure[_stafferId];
     stafferWeeklyExpenditure[_stafferId] = 0;
     totalWeeklyExpenditure -= _weeklyExpenditure;
-
+      stafferExist[_stafferAddress]= false;
     _burn(_stafferAddress, balanceOf(_stafferAddress));    
   }
 
@@ -327,9 +331,13 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
       uint256 amount
   ) internal virtual override {
     if (balanceOf(from) != 0) {
+      if (stafferExist[from] && currentPeriod != Period.Repayment){
+        require(false,"unable to transfer until repayment period");}
+        else{
       uint256 repaymentsProportion = repaymentsWithdrawn[from] * amount / balanceOf(from);
       repaymentsWithdrawn[from] -= repaymentsProportion;
-      repaymentsWithdrawn[to] += repaymentsProportion;
+      repaymentsWithdrawn[to] += repaymentsProportion;}
+     
     }
   }
 
