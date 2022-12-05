@@ -683,6 +683,79 @@ describe("EwolCampaign", function () {
 
     });
 
+    it("Should return the debt of the ewoler", async function(){
+
+      const ewolerId = 0;
+      const ewolerWithdrawals = await campaignInstance.ewolerWithdrawals(ewolerId);
+      const ewolerRepayments = await campaignInstance.ewolerRepayments(ewolerId);
+      const costForEwoler = await campaignInstance.costForEwoler();
+
+      const ewolerDebt = await campaignInstance.ewolerDebt(ewolerId);
+      console.log(ewolerDebt);
+      expect(ewolerDebt).to.equal(costForEwoler.add(ewolerWithdrawals.sub(ewolerRepayments)));
+    })
+
+    it("Should repay the ewoler debt", async function(){
+      const ewolerCampaignInstance = await campaignInstance.connect(sigInstances.ewoler);
+      const ewolerId = 0;
+      const initialDebt = await campaignInstance.ewolerDebt(0);
+
+      const ewolerRepaymentsBefore = await campaignInstance.ewolerRepayments(ewolerId);
+      const ewolerBalanceBefore = await stablecoinInstance.balanceOf(sigAddrs.ewoler)
+
+      //Approve
+      const ewolerStableCoinInstance = await stablecoinInstance.connect(sigInstances.ewoler);
+      const approveTx = await ewolerStableCoinInstance.approve(campaignAddress, initialDebt.div(2));
+      await approveTx.wait();
+
+      //Repay Debt
+      const repayDebt = await ewolerCampaignInstance.repayDebt(ewolerId, initialDebt.div(2));
+      await repayDebt.wait();
+
+      const ewolerRepaymentsAfter = await campaignInstance.ewolerRepayments(ewolerId);
+      const ewolerBalanceAfter = await stablecoinInstance.balanceOf(sigAddrs.ewoler)
+      const ewolerFinalDebt = await campaignInstance.ewolerDebt(0);
+
+      expect(ewolerRepaymentsAfter.sub(ewolerRepaymentsBefore)).to.equal(initialDebt.div(2));
+      expect(ewolerBalanceBefore.sub(ewolerBalanceAfter)).to.equal(initialDebt.div(2));
+      expect(initialDebt).to.equal(ewolerFinalDebt.mul(2));
+    })
+
+    it("Should prevent ewoeler to pay more than the his debt", async function(){
+      const ewolerCampaignInstance = await campaignInstance.connect(sigInstances.ewoler);
+      const ewolerId = 0;
+      const initialDebt = await campaignInstance.ewolerDebt(0);
+
+      //Approve
+      const ewolerStableCoinInstance = await stablecoinInstance.connect(sigInstances.ewoler);
+      const approveTx = await ewolerStableCoinInstance.approve(campaignAddress, initialDebt.mul(2));
+      await approveTx.wait();
+
+      //Repay Debt
+      const repayDebt =  ewolerCampaignInstance.repayDebt(ewolerId, initialDebt.mul(2));
+      expect(repayDebt).to.be.revertedWith("Paying more than owed");
+
+    })
+    
+    it("Should allow to withdraw repayment", async function(){
+      const investorReleasableBalance = await campaignInstance.releasableRepayment(sigAddrs.investor);
+      const investorBalanceBefore = await stablecoinInstance.balanceOf(sigAddrs.investor);
+      const totalRepaymentsWithdrawnBefore = await campaignInstance.totalRepaymentsWithdrawn();
+      const repaymentsWithdrawnBefore = await campaignInstance.repaymentsWithdrawn(sigAddrs.investor);
+
+      //Investtor Witdraw Repayment
+      const investorWithdraw = await campaignInstance.withdrawRepayment(sigAddrs.investor);
+      await investorWithdraw.wait();
+
+      const investorBalanceAfter = await stablecoinInstance.balanceOf(sigAddrs.investor);
+      const totalRepaymentsWithdrawnAfter = await campaignInstance.totalRepaymentsWithdrawn();
+      const repaymentsWithdrawnAfter = await campaignInstance.repaymentsWithdrawn(sigAddrs.investor);
+
+
+      expect(investorBalanceAfter).to.equal(investorBalanceBefore.add(investorReleasableBalance));
+      expect(totalRepaymentsWithdrawnAfter).to.equal(totalRepaymentsWithdrawnBefore.add(investorReleasableBalance));
+      expect(repaymentsWithdrawnAfter).to.equal(repaymentsWithdrawnBefore.add(investorReleasableBalance));
+    })
   });
 
 });

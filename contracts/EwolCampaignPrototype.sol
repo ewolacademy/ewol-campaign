@@ -328,6 +328,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
       uint256 amount
   ) internal virtual override {
     if (balanceOf(from) != 0) {
+      require(currentPeriod == Period.Repayment, "Wrong");
       uint256 repaymentsProportion = repaymentsWithdrawn[from] * amount / balanceOf(from);
       repaymentsWithdrawn[from] -= repaymentsProportion;
       repaymentsWithdrawn[to] += repaymentsProportion;
