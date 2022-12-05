@@ -19,6 +19,9 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
 
   /// @notice Amount of currency to be raised per Ewoler
   uint256 public investmentPerEwoler;
+
+  /// @notice Amount of currency to be paid by the Ewoler for receiving Bootcamp
+  uint256 public costForEwoler;
   
   /// @notice Address of the ERC20 token used as campaign currency
   address public currencyToken;
@@ -41,6 +44,9 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   /// @notice Total amount already withdrawn by the ewoler
   mapping (uint256 => uint256) public ewolerWithdrawals;
 
+  /// @notice Total amount repayed by the ewoler
+  mapping (uint256 => uint256) public ewolerRepayments;
+
   /// @notice Wallet address for each staff member
   mapping (uint256 => address) public stafferAddress;
 
@@ -59,6 +65,12 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   /// @notice Total amount of expenditure paid to ewolers or staff members
   uint256 public totalExpendituresWithdrawn;
 
+  /// @notice Amount of repayments withdrawn per token holder
+  mapping (address => uint256) public repaymentsWithdrawn;
+
+  /// @notice Total amount of repayments paid to token holders
+  uint256 public totalRepaymentsWithdrawn;
+
   modifier onlyPeriod (Period _period) {
     require(currentPeriod == _period, "Method not available for this period");
     _;
@@ -69,6 +81,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   /// @param _campaignName        Name of the Ewol Campaign
   /// @param _targetEwolers       Target quantity of Ewolers to raise funding for
   /// @param _investmentPerEwoler Amount of currency to be raised per Ewoler
+  /// @param _costForEwoler       Amount of currency to be paid by the Ewoler for receiving Bootcamp
   /// @param _currencyToken       Address of the ERC20 token used as campaign currency
   /// @param _weeksOfBootcamp     Number of weeks of the bootcamp
   /// @param _premintAmount       Amount of campaign tokens preminted for the campaign launcher
@@ -77,6 +90,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     string calldata _campaignName,
     uint16 _targetEwolers,
     uint256 _investmentPerEwoler,
+    uint256 _costForEwoler,
     address _currencyToken,
     uint8 _weeksOfBootcamp,
     uint256 _premintAmount,
@@ -89,6 +103,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     // Saves campaign data for future use
     targetEwolers = _targetEwolers;
     investmentPerEwoler = _investmentPerEwoler;
+    costForEwoler = _costForEwoler;
     currencyToken = _currencyToken;
     weeksOfBootcamp = _weeksOfBootcamp;
 
@@ -249,7 +264,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(currencyToken), stafferAddress[_stafferId], _withdrawAmount);
   }
 
-  /// @notice Pending amount pending withdrawal by staffers or ewolers
+  /// @notice Pending amount withdrawal by staffers or ewolers
   function _pendingTotalExpenditure () private view returns (uint256) {
     uint256 _totalExpenditure = totalWeeklyExpenditure * _weeksOfBootcampElapsed();
     return _totalExpenditure - totalExpendituresWithdrawn;
@@ -267,8 +282,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   function ewolerDebt (
     uint256 _ewolerId
   ) public view virtual override returns (uint256) {
-    return targetEwolers; // TO REPLACE
-    
+    return costForEwoler + ewolerWithdrawals[_ewolerId] - ewolerRepayments[_ewolerId];
   }
 
   /// @notice Repay the ewoler debt
@@ -278,17 +292,51 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     uint256 _ewolerId,
     uint256 _amount
   ) public virtual override {
-    
-    
+    require(_amount <= ewolerDebt(_ewolerId), "Paying more than owed");
+    SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(currencyToken), msg.sender, address(this), _amount);
+    ewolerRepayments[_ewolerId] += _amount;
+  }
+
+  /// @notice Amount of repayment available for withdrawal 
+  /// @dev Amount available is proportional to campaign tokens holding less any withdrawn amounts
+  /// @param _claimer Address of the campaign token holder withdrawing a repayment
+  /// @return Amount available
+  function releasableRepayment (
+    address _claimer
+  ) public view virtual override onlyPeriod(Period.Repayment) returns (uint256) {
+    uint256 totalReceived = IERC20Upgradeable(currencyToken).balanceOf(address(this)) - _pendingTotalExpenditure() + totalRepaymentsWithdrawn;
+    return (totalReceived * balanceOf(_claimer)) / totalSupply() - repaymentsWithdrawn[_claimer];
   }
 
   /// @notice Withdraw repayment amount
-  /// @dev Amount to withdraw is proportional to campaign tokens holding
+  /// @dev Amount to withdraw is proportional to campaign tokens holding less any withdrawn amounts
   /// @param _claimer Address of the campaign token holder withdrawing a repayment
   function withdrawRepayment (
     address _claimer
   ) public virtual override {
-    
-    
+    require(balanceOf(_claimer) > 0, "Claimer has no balance");
+    uint256 _payment = releasableRepayment(_claimer);
+    require(_payment != 0, "Claimer is not due payment");
+    totalRepaymentsWithdrawn += _payment;
+    repaymentsWithdrawn[_claimer] += _payment;
+    SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(currencyToken), _claimer, _payment);
   }
+
+  function _beforeTokenTransfer(
+      address from,
+      address to,
+      uint256 amount
+  ) internal virtual override {
+    if (balanceOf(from) != 0) {
+      uint256 repaymentsProportion = repaymentsWithdrawn[from] * amount / balanceOf(from);
+      repaymentsWithdrawn[from] -= repaymentsProportion;
+      repaymentsWithdrawn[to] += repaymentsProportion;
+    }
+  }
+
+  // PENDING IMPLEMENTATIONS
+  // - Prevent staffers from transfering tokens before Bootcmap has ended
+  // - Testing for ewolerDebt /  repayDebt / releasableRepayment / withdrawRepayment
+  // - Testing releasableRepayment / withdrawRepayment after token transfers
+
 }
