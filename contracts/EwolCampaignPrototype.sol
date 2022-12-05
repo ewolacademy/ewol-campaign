@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol";
+
 /// @title Ewol Campaign Prototype
 /// @author heidrian.eth
 /// @notice This contract is used as prototype to clone each Ewol Academy Web3 Bootcamp campaign
@@ -55,7 +56,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   /// @notice Total amount already withdrawn by each staff member
   mapping (uint256 => uint256) public stafferWithdrawals;
 
-  /// @notice Total amount to be released per week for ewolers and staff members
+   /// @notice Total amount to be released per week for ewolers and staff members
   uint256 public totalWeeklyExpenditure;
 
   /// @notice Timestamp of the start of the bootcamp
@@ -327,6 +328,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
       uint256 amount
   ) internal virtual override {
     if (balanceOf(from) != 0) {
+      require(currentPeriod == Period.Repayment, "Bootcamp has ended"); //No entendi muy bien como implementarlo
       uint256 repaymentsProportion = repaymentsWithdrawn[from] * amount / balanceOf(from);
       repaymentsWithdrawn[from] -= repaymentsProportion;
       repaymentsWithdrawn[to] += repaymentsProportion;
