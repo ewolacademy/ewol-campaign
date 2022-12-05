@@ -756,6 +756,14 @@ describe("EwolCampaign", function () {
       expect(totalRepaymentsWithdrawnAfter).to.equal(totalRepaymentsWithdrawnBefore.add(investorReleasableBalance));
       expect(repaymentsWithdrawnAfter).to.equal(repaymentsWithdrawnBefore.add(investorReleasableBalance));
     })
+
+    it("Should not allow to withdraw repayment", async function(){
+      
+      const investor = sigAddrs.investor;
+      const investorWithdraw =  campaignInstance.withdrawRepayment(investor);
+      expect(investorWithdraw).to.revertedWith("Claimer is not due payment");
+      
+    })
   });
 
 });
