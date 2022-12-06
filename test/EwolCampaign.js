@@ -654,8 +654,76 @@ describe("EwolCampaign", function () {
 
       expect(await campaignInstance.currentPeriod())
         .to.equal(PERIODS.REPAYMENT);
-
-    });
-
   });
+  });
+});
+
+describe("Ewol Campaign Repayment", function () {
+  it("Should allow a staffer to transfer tokens on repayment period", async function () {
+    const campaignInstanceForStaffr = campaignInstance.connect(
+      sigInstances.staff
+    );
+    const staffBalanceBeforeTx = await campaignInstance.balanceOf(
+      sigAddrs.staff
+    );
+    const value = staffBalanceBeforeTx.div(2);
+
+    const staffTx = await campaignInstanceForStaffr.transfer(
+      sigAddrs.stranger,
+      value
+    );
+
+    staffTx.wait();
+
+    const staffBalanceAfterTx = await campaignInstance.balanceOf(
+      sigAddrs.staff
+    );
+
+    expect(staffBalanceAfterTx).to.equal(staffBalanceBeforeTx.sub(value));
+  });
+
+  it("Should calculates the correct amount of debt for an ewoler", async function () {
+    const ewolerDebt = await campaignInstance.ewolerDebt(0);
+    const total = (await campaignInstance.costForEwoler())
+      .add(await campaignInstance.ewolerWithdrawals(0))
+      .sub(await campaignInstance.ewolerRepayments(0));
+    expect(ewolerDebt).to.equal(total);
+  });
+  it("Should correct debt if ewoler pays", async function () {
+    const ewolerInstanceforStablecoin = await stablecoinInstance.connect(
+      sigInstances.ewoler
+    );
+    const ewolerInitalDebt = await campaignInstance.ewolerDebt(0);
+    const paymentApprove = await ewolerInstanceforStablecoin.approve(
+      campaignAddress,
+      ewolerInitalDebt.div(2)
+    );
+    await paymentApprove.wait();
+    const ewolerInstance = await campaignInstance.connect(
+      sigInstances.ewoler
+    );
+    const ewolerPayment = await ewolerInstance.repayDebt(
+      0,
+      ewolerInitalDebt.div(2)
+    );
+    await ewolerPayment.wait();
+    const ewolerFinalDebt = await campaignInstance.ewolerDebt(0);
+    expect(ewolerInitalDebt).to.equal(ewolerFinalDebt.mul(2));
+  });
+  it("Should prevent ewoler to pay more than he owes", async function () {
+    const ewolerInstanceforStablecoin = await stablecoinInstance.connect(
+      sigInstances.ewoler
+    );
+    const ewolerInitalDebt = await campaignInstance.ewolerDebt(0);
+    const paymentApprove = await ewolerInstanceforStablecoin.approve(
+      campaignAddress,
+      ewolerInitalDebt
+    );
+    await paymentApprove.wait();
+    const ewolerInstance = await campaignInstance.connect(
+      sigInstances.ewoler
+    );
+    const ewolerPayment = ewolerInstance.repayDebt(0, ewolerInitalDebt + 1);
+    await expect(ewolerPayment).to.be.revertedWith("Paying more than owed");
+  })
 });
