@@ -13,6 +13,7 @@ interface IEwolCampaignRegistry {
   /// @param _investmentPerEwoler Amount of currency to be raised per Ewoler
   /// @param _costForEwoler       Amount of currency to be paid by the Ewoler for receiving Bootcamp
   /// @param _currencyToken       Address of the ERC20 token used as campaign currency
+  /// @param _investmentToken     Address of the AAVE investment token
   /// @param _weeksOfBootcamp     Number of weeks of the bootcamp
   /// @param _premintAmount       Amount of campaign tokens preminted for the campaign launcher
   function launchCampaign (
@@ -21,6 +22,7 @@ interface IEwolCampaignRegistry {
     uint256 _investmentPerEwoler,
     uint256 _costForEwoler,
     address _currencyToken,
+    address _investmentToken,
     uint8 _weeksOfBootcamp,
     uint256 _premintAmount
   ) external;

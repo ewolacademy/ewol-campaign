@@ -6,6 +6,66 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol";
+
+interface IAaveToken {
+
+  function POOL () external view returns(address);
+
+   /**
+   * @dev Returns the amount of tokens owned by `account`.
+   */
+  function balanceOf(address account) external view returns (uint256);
+
+  /**
+   * @notice Returns the scaled balance of the user.
+   * @dev The scaled balance is the sum of all the updated stored balance divided by the reserve's liquidity index
+   * at the moment of the update
+   * @param user The user whose balance is calculated
+   * @return The scaled balance of the user
+   **/
+  function scaledBalanceOf(address user) external view returns (uint256);
+
+}
+
+interface IAavePool {
+  /**
+   * @notice Supplies an `amount` of underlying asset into the reserve, receiving in return overlying aTokens.
+   * - E.g. User supplies 100 USDC and gets in return 100 aUSDC
+   * @param asset The address of the underlying asset to supply
+   * @param amount The amount to be supplied
+   * @param onBehalfOf The address that will receive the aTokens, same as msg.sender if the user
+   *   wants to receive them on his own wallet, or a different address if the beneficiary of aTokens
+   *   is a different wallet
+   * @param referralCode Code used to register the integrator originating the operation, for potential rewards.
+   *   0 if the action is executed directly by the user, without any middle-man
+   **/
+  function supply(
+    address asset,
+    uint256 amount,
+    address onBehalfOf,
+    uint16 referralCode
+  ) external;
+
+  /**
+   * @notice Withdraws an `amount` of underlying asset from the reserve, burning the equivalent aTokens owned
+   * E.g. User has 100 aUSDC, calls withdraw() and receives 100 USDC, burning the 100 aUSDC
+   * @param asset The address of the underlying asset to withdraw
+   * @param amount The underlying amount to be withdrawn
+   *   - Send the value type(uint256).max in order to withdraw the whole aToken balance
+   * @param to The address that will receive the underlying, same as msg.sender if the user
+   *   wants to receive it on his own wallet, or a different address if the beneficiary is a
+   *   different wallet
+   * @return The final amount withdrawn
+   **/
+  function withdraw(
+    address asset,
+    uint256 amount,
+    address to
+  ) external returns (uint256);
+}
+
+
+
 /// @title Ewol Campaign Prototype
 /// @author heidrian.eth
 /// @notice This contract is used as prototype to clone each Ewol Academy Web3 Bootcamp campaign
@@ -24,6 +84,12 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   
   /// @notice Address of the ERC20 token used as campaign currency
   address public currencyToken;
+  
+  /// @notice Address of the AAVE investment token
+  IAaveToken public investmentToken;
+
+  /// @notice Address of the AAVE investment pool
+  IAavePool public investmentPool;
   
   /// @notice Number of weeks of the bootcamp
   uint8 public weeksOfBootcamp;
@@ -85,6 +151,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   /// @param _investmentPerEwoler Amount of currency to be raised per Ewoler
   /// @param _costForEwoler       Amount of currency to be paid by the Ewoler for receiving Bootcamp
   /// @param _currencyToken       Address of the ERC20 token used as campaign currency
+  /// @param _investmentToken     Address of the AAVE investment token
   /// @param _weeksOfBootcamp     Number of weeks of the bootcamp
   /// @param _premintAmount       Amount of campaign tokens preminted for the campaign launcher
   /// @param _owner               The initial campaign owner
@@ -94,6 +161,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     uint256 _investmentPerEwoler,
     uint256 _costForEwoler,
     address _currencyToken,
+    address _investmentToken,
     uint8 _weeksOfBootcamp,
     uint256 _premintAmount,
     address _owner
@@ -108,6 +176,9 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     costForEwoler = _costForEwoler;
     currencyToken = _currencyToken;
     weeksOfBootcamp = _weeksOfBootcamp;
+
+    investmentToken = IAaveToken(_investmentToken);
+    investmentPool = IAavePool(investmentToken.POOL());
 
     // Premints tokens for campaign owner
     _mint(_owner, _premintAmount);
@@ -136,6 +207,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     require(currencyToken == _depositToken, "Deposit token not supported");
     require(_amount <= investmentCap() - totalInvested, "Deposit exceeds investment cap");
     SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(_depositToken), msg.sender, address(this), _amount);
+    investmentPool.supply(_depositToken, _amount, address(this), 0);
     totalInvested += _amount;
     _mint(msg.sender, _amount);
   }
@@ -243,7 +315,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     uint256 _withdrawAmount = pendingEwolerExpenditure(_ewolerId);
     ewolerWithdrawals[_ewolerId] += _withdrawAmount;
     totalExpendituresWithdrawn += _withdrawAmount;
-    SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(currencyToken), ewolerAddress[_ewolerId], _withdrawAmount);
+    investmentPool.withdraw(currencyToken, _withdrawAmount, ewolerAddress[_ewolerId]);
   }
 
   /// @notice Pending amount to be withdrawn by the staffer
@@ -264,7 +336,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     uint256 _withdrawAmount = pendingStafferExpenditure(_stafferId);
     stafferWithdrawals[_stafferId] += _withdrawAmount;
     totalExpendituresWithdrawn += _withdrawAmount;
-    SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(currencyToken), stafferAddress[_stafferId], _withdrawAmount);
+    investmentPool.withdraw(currencyToken, _withdrawAmount, stafferAddress[_stafferId]);
   }
 
   /// @notice Pending amount withdrawal by staffers or ewolers
@@ -297,6 +369,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   ) public virtual override {
     require(_amount <= ewolerDebt(_ewolerId), "Paying more than owed");
     SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(currencyToken), msg.sender, address(this), _amount);
+    investmentPool.supply(currencyToken, _amount, address(this), 0);
     ewolerRepayments[_ewolerId] += _amount;
   }
 
@@ -307,7 +380,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   function releasableRepayment (
     address _claimer
   ) public view virtual override onlyPeriod(Period.Repayment) returns (uint256) {
-    uint256 totalReceived = IERC20Upgradeable(currencyToken).balanceOf(address(this)) - _pendingTotalExpenditure() + totalRepaymentsWithdrawn;
+    uint256 totalReceived = investmentToken.balanceOf(address(this)) - _pendingTotalExpenditure() + totalRepaymentsWithdrawn;
     return (totalReceived * balanceOf(_claimer)) / totalSupply() - repaymentsWithdrawn[_claimer];
   }
 
@@ -322,7 +395,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     require(_payment != 0, "Claimer is not due payment");
     totalRepaymentsWithdrawn += _payment;
     repaymentsWithdrawn[_claimer] += _payment;
-    SafeERC20Upgradeable.safeTransfer(IERC20Upgradeable(currencyToken), _claimer, _payment);
+    investmentPool.withdraw(currencyToken, _payment, _claimer);
   }
 
   function _beforeTokenTransfer(
