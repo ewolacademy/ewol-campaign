@@ -205,8 +205,43 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
     uint256 _amount
   ) public virtual override onlyPeriod(Period.Investment) {
     require(currencyToken == _depositToken, "Deposit token not supported");
+
+    /*
+
+    require(supportedDepositTokens[_depositToken], "Deposit token not supported");
+
+    SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(_depositToken), msg.sender, address(this), _amount);
+    uint256 _swappedAmount;
+    if (_depositToken != currencyToken) {
+      SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(_depositToken), address(ISwapRouter), _amount);
+    
+      ISwapRouter.ExactInputSingleParams memory params =
+            ISwapRouter.ExactInputSingleParams({
+                tokenIn: _depositToken,
+                tokenOut: currencyToken,
+                fee: poolFee,
+                recipient: msg.sender,
+                deadline: block.timestamp,
+                amountIn: _amount,
+                amountOutMinimum: _amount * minimumFactor[_depositToken],
+                sqrtPriceLimitX96: 0
+            });
+      _swappedAmount = swapRouter.exactInputSingle(params);
+    } else {
+      _swappedAmount = _amount;
+    }
+    require(_swappedAmount <= investmentCap() - totalInvested, "Deposit exceeds investment cap");
+
+    SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(currencyToken), address(investmentPool), _swappedAmount);
+    investmentPool.supply(currencyToken, _swappedAmount, address(this), 0);
+    totalInvested += _swappedAmount;
+    _mint(msg.sender, _swappedAmount);
+
+    */
+
     require(_amount <= investmentCap() - totalInvested, "Deposit exceeds investment cap");
     SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(_depositToken), msg.sender, address(this), _amount);
+    SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(_depositToken), address(investmentPool), _amount);
     investmentPool.supply(_depositToken, _amount, address(this), 0);
     totalInvested += _amount;
     _mint(msg.sender, _amount);
@@ -369,6 +404,7 @@ contract EwolCampaignPrototype is IEwolCampaignPrototype, OwnableUpgradeable, ER
   ) public virtual override {
     require(_amount <= ewolerDebt(_ewolerId), "Paying more than owed");
     SafeERC20Upgradeable.safeTransferFrom(IERC20Upgradeable(currencyToken), msg.sender, address(this), _amount);
+    SafeERC20Upgradeable.safeApprove(IERC20Upgradeable(currencyToken), address(investmentPool), _amount);
     investmentPool.supply(currencyToken, _amount, address(this), 0);
     ewolerRepayments[_ewolerId] += _amount;
   }

@@ -32,7 +32,7 @@ contract EwolCampaignRegistry is IEwolCampaignRegistry, Ownable {
 
   constructor () {
     EwolCampaignPrototype campaignPrototype = new EwolCampaignPrototype();
-    campaignPrototype.init("", 0, 0, 0, address(0), address(0), 0, 0, address(this)); // Dummy initialization
+    // campaignPrototype.init("", 0, 0, 0, address(0), address(0), 0, 0, address(this)); // Dummy initialization
     prototypeAddress = address(campaignPrototype);
   }
 

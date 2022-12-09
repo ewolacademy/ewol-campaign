@@ -7,8 +7,16 @@ module.exports = {
     hardhat: {
       chainId: 137,
       accounts: {
-        accountsBalance: "10000000000000000000000000"
+        accountsBalance: "10000000" + "000000000000000000"
       }
+    },
+    "hardhat-local": {
+      url: "http://localhost:8545",
+      chainId: 137,
+      timeout: 100000
     }
+  },
+  mocha: {
+    timeout: 400000000
   }
 };
